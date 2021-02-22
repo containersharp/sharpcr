@@ -36,6 +36,7 @@ namespace SharpCR.Registry
             {
                 endpoints.MapControllers();
             });
+            
         }
     }
 }

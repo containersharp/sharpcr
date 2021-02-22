@@ -8,8 +8,12 @@ namespace SharpCR.Registry.Controllers
         [Route("")]
         public ActionResult Base()
         {
-            HttpContext.Response.Headers.Add("Docker-Distribution-API-Version", "registry/2.0");
-            HttpContext.Response.Headers.Add("Vary", "Authorization");
+            if (HttpContext != null)
+            {
+                HttpContext.Response.Headers.Add("Docker-Distribution-API-Version", "registry/2.0");
+                HttpContext.Response.Headers.Add("Vary", "Authorization");
+            }
+
             return new OkResult();
         }
         
