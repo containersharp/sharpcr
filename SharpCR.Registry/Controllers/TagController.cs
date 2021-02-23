@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers.ResponseModels;
 using SharpCR.Registry.Models;
@@ -7,17 +9,45 @@ namespace SharpCR.Registry.Controllers
 {
     public class TagController
     {
+        private readonly IRepository<ImageRepository> _imageRepositoryRepo;
+        private readonly IRepository<Tag> _tagRepo;
+        public TagController(IRepository<Tag> tagRepo, IRepository<ImageRepository> imageRepositoryRepo)
+        {
+            _tagRepo = tagRepo;
+            _imageRepositoryRepo = imageRepositoryRepo;
+        }
+        
+        
         [RegistryRoute("tags/list")]
         [HttpGet]
-        public TagListResponse List(string repo, [FromQuery]int? n, [FromQuery]string last)
+        public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
-            // QUESTION: should "last" by an integer or a string to indicate the last tag?
-            // QUESTION: should we send a "link" in the response header?
+            var imageRepo = _imageRepositoryRepo.All()
+                .FirstOrDefault(r => string.Equals(repo, r.Name, StringComparison.OrdinalIgnoreCase));
+            if (imageRepo == null)
+            {
+                return new NotFoundResult();
+            }
+
+            n ??= 0;
+            IEnumerable<string> returnList = null;
+            var queryableTags = _tagRepo.All().Where(t => t.RepositoryId == imageRepo.Id).OrderBy(t => t.Name);
+            if (!string.IsNullOrEmpty(last))
+            {
+                var allTags = queryableTags.Select(t => t.Name).ToList();
+                var indexOfLast = allTags.FindIndex(t => string.Equals(t, last, StringComparison.OrdinalIgnoreCase));
+                if (indexOfLast >= 0)
+                {
+                    returnList = allTags.Skip(indexOfLast + 1);
+                }
+            }
             
+            returnList ??= queryableTags.Select(t => t.Name).ToList();
+            returnList = n > 0 ? returnList.Take(n.Value) : returnList;
             return new TagListResponse
             {
-                name = repo,
-                tags = new List<string>()
+                name = imageRepo.Name,
+                tags = returnList.ToList()
             };
         }
         
