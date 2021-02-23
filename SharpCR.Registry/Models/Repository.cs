@@ -2,9 +2,9 @@ using System;
 
 namespace SharpCR.Registry.Models
 {
-    public class Tag
+    public class Repository
     {
-        public Guid RepositoryId { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
     }
 }

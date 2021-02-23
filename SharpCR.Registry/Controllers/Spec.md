@@ -490,10 +490,10 @@ of this specification.
 | end-2  | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
 | end-4a | `POST`         | `/v2/<name>/blobs/uploads/`                                       | `202`                              | `404`                           |
 | end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                       | `201`/`202`                        | `404`/`400`                     |
+| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
 | end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                            | `202`                              | `404`/`416`                     |
 | end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`            | `201`                              | `404`/`400`                     |
 | end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
-| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
 
 #### Error Codes
 
