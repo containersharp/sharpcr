@@ -8,11 +8,11 @@ namespace SharpCR.Registry
 {
     public class RegistryRouteAttribute : Attribute, IActionModelConvention, IResourceFilter
     {
-        private readonly string _template;
+        private readonly string[] _templates;
 
-        public RegistryRouteAttribute(string template)
+        public RegistryRouteAttribute(params string[] templates)
         {
-            _template = template;
+            _templates = templates;
         }
         
         public void Apply(ActionModel actionModel)
@@ -30,15 +30,18 @@ namespace SharpCR.Registry
             actionModel.Selectors.Clear();
             foreach (var prefix in prefixes)
             {
-                var newSelector = new SelectorModel(existingSelector)
+                foreach (var template in _templates)
                 {
-                    AttributeRouteModel = new AttributeRouteModel
+                    var newSelector = new SelectorModel(existingSelector)
                     {
-                        Template = string.Concat(prefix, _template)
-                    }
-                };
+                        AttributeRouteModel = new AttributeRouteModel
+                        {
+                            Template = string.Concat(prefix, template)
+                        }
+                    };
 
-                actionModel.Selectors.Add(newSelector);                
+                    actionModel.Selectors.Add(newSelector);
+                }
             }
         }
 
