@@ -16,8 +16,8 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyImageTag2 = new Tag {Name = "v1.0.0", RepositoryId = dummyImageRepo2.Id};
             
             var controller = new TagController(
-                (new []{dummyImageTag1, dummyImageTag2 }).AsMockRepo().Object, 
-                (new []{dummyImageRepo1, dummyImageRepo2 }).AsMockRepo().Object);
+                (new []{dummyImageTag1, dummyImageTag2 }).AsMockStore().Object, 
+                (new []{dummyImageRepo1, dummyImageRepo2 }).AsMockStore().Object);
 
             var tagResponse = controller.List(dummyImageRepo2.Name, 1, null);
             

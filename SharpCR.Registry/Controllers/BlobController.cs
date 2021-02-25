@@ -10,6 +10,8 @@ namespace SharpCR.Registry.Controllers
         [HttpHead]
         public object Get(string digest)
         {
+            // Docker-Content-Digest
+
             return null;
         }
         

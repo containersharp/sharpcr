@@ -9,12 +9,12 @@ namespace SharpCR.Registry.Controllers
 {
     public class TagController
     {
-        private readonly IRepository<ImageRepository> _imageRepositoryRepo;
-        private readonly IRepository<Tag> _tagRepo;
-        public TagController(IRepository<Tag> tagRepo, IRepository<ImageRepository> imageRepositoryRepo)
+        private readonly IDataStore<ImageRepository> _imageRepositoryDataStore;
+        private readonly IDataStore<Tag> _tagDataStore;
+        public TagController(IDataStore<Tag> tagDataStore, IDataStore<ImageRepository> imageRepositoryDataStore)
         {
-            _tagRepo = tagRepo;
-            _imageRepositoryRepo = imageRepositoryRepo;
+            _tagDataStore = tagDataStore;
+            _imageRepositoryDataStore = imageRepositoryDataStore;
         }
         
         
@@ -22,7 +22,7 @@ namespace SharpCR.Registry.Controllers
         [HttpGet]
         public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
-            var imageRepo = _imageRepositoryRepo.All()
+            var imageRepo = _imageRepositoryDataStore.All()
                 .FirstOrDefault(r => string.Equals(repo, r.Name, StringComparison.OrdinalIgnoreCase));
             if (imageRepo == null)
             {
@@ -31,7 +31,7 @@ namespace SharpCR.Registry.Controllers
 
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableTags = _tagRepo.All().Where(t => t.RepositoryId == imageRepo.Id).OrderBy(t => t.Name);
+            var queryableTags = _tagDataStore.All().Where(t => t.RepositoryId == imageRepo.Id).OrderBy(t => t.Name);
             if (!string.IsNullOrEmpty(last))
             {
                 var allTags = queryableTags.Select(t => t.Name).ToList();

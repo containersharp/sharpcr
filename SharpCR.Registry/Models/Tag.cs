@@ -6,5 +6,7 @@ namespace SharpCR.Registry.Models
     {
         public Guid RepositoryId { get; set; }
         public string Name { get; set; }
+        
+        public string DigestString { get; set; }
     }
 }
