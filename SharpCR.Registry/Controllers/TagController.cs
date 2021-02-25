@@ -10,10 +10,10 @@ namespace SharpCR.Registry.Controllers
     public class TagController
     {
         private readonly IDataStore<ImageRepository> _imageRepositoryDataStore;
-        private readonly IDataStore<Tag> _tagDataStore;
-        public TagController(IDataStore<Tag> tagDataStore, IDataStore<ImageRepository> imageRepositoryDataStore)
+        private readonly IDataStore<Image> _imageDataStore;
+        public TagController(IDataStore<Image> imageDataStore, IDataStore<ImageRepository> imageRepositoryDataStore)
         {
-            _tagDataStore = tagDataStore;
+            _imageDataStore = imageDataStore;
             _imageRepositoryDataStore = imageRepositoryDataStore;
         }
         
@@ -31,10 +31,10 @@ namespace SharpCR.Registry.Controllers
 
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableTags = _tagDataStore.All().Where(t => t.RepositoryId == imageRepo.Id).OrderBy(t => t.Name);
+            var queryableTags = _imageDataStore.All().Where(img => img.RepositoryName == repo).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
-                var allTags = queryableTags.Select(t => t.Name).ToList();
+                var allTags = queryableTags.Select(t => t.Tag).ToList();
                 var indexOfLast = allTags.FindIndex(t => string.Equals(t, last, StringComparison.OrdinalIgnoreCase));
                 if (indexOfLast >= 0)
                 {
@@ -42,7 +42,7 @@ namespace SharpCR.Registry.Controllers
                 }
             }
             
-            returnList ??= queryableTags.Select(t => t.Name).ToList();
+            returnList ??= queryableTags.Select(t => t.Tag).ToList();
             returnList = n > 0 ? returnList.Take(n.Value) : returnList;
             return new TagListResponse
             {
