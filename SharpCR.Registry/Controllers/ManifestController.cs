@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SharpCR.Registry.Models;
@@ -8,13 +7,11 @@ namespace SharpCR.Registry.Controllers
 {
     public class ManifestController : ControllerBase
     {
-        private readonly IDataStore<ImageRepository> _imageRepositoryStore;
-        private readonly IDataStore<Image> _imageStore;
+        private readonly IDataStore _dataStore;
 
-        public ManifestController(IDataStore<ImageRepository> imageRepositoryStore, IDataStore<Image> imageStore)
+        public ManifestController(IDataStore dataStore)
         {
-            _imageRepositoryStore = imageRepositoryStore;
-            _imageStore = imageStore;
+            _dataStore = dataStore;
         }
 
         [RegistryRoute("manifests/{reference}")]
@@ -22,8 +19,7 @@ namespace SharpCR.Registry.Controllers
         [HttpHead]
         public ActionResult Get(string repo, string reference)
         {
-            var imageRepo = _imageRepositoryStore.All()
-                .FirstOrDefault(r => string.Equals(r.Name, repo, StringComparison.OrdinalIgnoreCase));
+            var imageRepo = _dataStore.GetRepository(repo);
             if (imageRepo == null)
             {
                 return new NotFoundResult();
@@ -35,7 +31,6 @@ namespace SharpCR.Registry.Controllers
                 return new NotFoundResult();
             }
 
-            
             HttpContext.Response.Headers.Add("Docker-Content-Digest", image.DigestString);
             
             var manifestBytes = image.ManifestBytes;
@@ -66,16 +61,9 @@ namespace SharpCR.Registry.Controllers
 
         private Image GetImageByReference(string reference, string repoName)
         {
-            if (Digest.TryParse(reference, out _))
-            {
-                return _imageStore.All().FirstOrDefault(t =>
-                    string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(t.DigestString, reference, StringComparison.OrdinalIgnoreCase));
-            }
-
-            return _imageStore.All().FirstOrDefault(t =>
-                string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(t.Tag, reference, StringComparison.OrdinalIgnoreCase));
+            return Digest.TryParse(reference, out _) 
+                ? _dataStore.GetImagesByDigest(repoName, reference) 
+                : _dataStore.GetImagesByTag(repoName, reference);
         }
     }
 }

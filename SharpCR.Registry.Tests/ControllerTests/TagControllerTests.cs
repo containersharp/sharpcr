@@ -10,14 +10,11 @@ namespace SharpCR.Registry.Tests.ControllerTests
         [Fact]
         public void ListTags()
         {
-            var dummyImageRepo1 = new ImageRepository {Name = "bar/abcd", Id = Guid.NewGuid()};
-            var dummyImageRepo2 = new ImageRepository {Name = "foo/abcd", Id = Guid.NewGuid()};
-            var dummyImageTag1 = new Image {Tag = "z1.0.0", RepositoryName = dummyImageRepo2.Name};
-            var dummyImageTag2 = new Image {Tag = "v1.0.0", RepositoryName = dummyImageRepo2.Name};
+            var dummyImageRepo2 = new ImageRepository {Name = "foo/abcd"};
+            var dummyImage1 = new Image {Tag = "z1.0.0", RepositoryName = dummyImageRepo2.Name};
+            var dummyImage2 = new Image {Tag = "v1.0.0", RepositoryName = dummyImageRepo2.Name};
             
-            var controller = new TagController(
-                (new []{dummyImageTag1, dummyImageTag2 }).AsMockStore().Object, 
-                (new []{dummyImageRepo1, dummyImageRepo2 }).AsMockStore().Object);
+            var controller = new TagController(new DataStoreStub(dummyImage1, dummyImage2));
 
             var tagResponse = controller.List(dummyImageRepo2.Name, 1, null);
             

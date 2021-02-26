@@ -9,12 +9,11 @@ namespace SharpCR.Registry.Controllers
 {
     public class TagController
     {
-        private readonly IDataStore<ImageRepository> _imageRepositoryDataStore;
-        private readonly IDataStore<Image> _imageDataStore;
-        public TagController(IDataStore<Image> imageDataStore, IDataStore<ImageRepository> imageRepositoryDataStore)
+        private readonly IDataStore _dataStore;
+
+        public TagController(IDataStore dataStore)
         {
-            _imageDataStore = imageDataStore;
-            _imageRepositoryDataStore = imageRepositoryDataStore;
+            _dataStore = dataStore;
         }
         
         
@@ -22,8 +21,7 @@ namespace SharpCR.Registry.Controllers
         [HttpGet]
         public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
-            var imageRepo = _imageRepositoryDataStore.All()
-                .FirstOrDefault(r => string.Equals(repo, r.Name, StringComparison.OrdinalIgnoreCase));
+            var imageRepo = _dataStore.GetRepository(repo);
             if (imageRepo == null)
             {
                 return new NotFoundResult();
@@ -31,12 +29,10 @@ namespace SharpCR.Registry.Controllers
 
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableTags = _imageDataStore.All()
-                .Where(img => string.Equals(img.RepositoryName, repo, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(t => t.Tag);
+            var queryableImages = _dataStore.ListImages(repo).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
-                var allTags = queryableTags.Select(t => t.Tag).ToList();
+                var allTags = queryableImages.Select(t => t.Tag).ToList();
                 var indexOfLast = allTags.FindIndex(t => string.Equals(t, last, StringComparison.OrdinalIgnoreCase));
                 if (indexOfLast >= 0)
                 {
@@ -44,7 +40,7 @@ namespace SharpCR.Registry.Controllers
                 }
             }
             
-            returnList ??= queryableTags.Select(t => t.Tag).ToList();
+            returnList ??= queryableImages.Select(t => t.Tag).ToList();
             returnList = n > 0 ? returnList.Take(n.Value) : returnList;
             return new TagListResponse
             {
