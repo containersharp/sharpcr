@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
@@ -48,9 +49,43 @@ namespace SharpCR.Registry.Controllers
 
         [RegistryRoute("manifests/{reference}")]
         [HttpPut]
-        public void Update(string reference)
+        public IActionResult Update(string repo, string reference)
         {
+            using var memoryStream = new MemoryStream();
+            Request.Body.CopyTo(memoryStream);
+            var manifestBytes = memoryStream.ToArray();
+
+            Manifest manifest = null;
+            try
+            {
+                manifest = Manifest.Parse(manifestBytes);
+            }
+            catch
+            {
+                return new StatusCodeResult((int) HttpStatusCode.BadRequest);
+            }
+
+            var existingImage = GetImageByReference(reference, repo);
+            if (existingImage == null)
+            {
+                var image = new Image
+                {
+                    Tag   = manifest.Tag,
+                    RepositoryName = repo,
+                    ManifestBytes = manifest.RawJsonBytes
+                };
+                _dataStore.CreateImage(image);
+            }
+            else
+            {
+                existingImage.ManifestBytes = manifestBytes;
+                _dataStore.UpdateImage(existingImage);
+            }
             
+            var digest = manifest.CalculateDigest();
+            HttpContext.Response.Headers.Add("Location", $"/v2/{repo}/manifests/{reference}");
+            HttpContext.Response.Headers.Add("Docker-Content-Digest", digest.GetHashString());
+            return new StatusCodeResult((int) HttpStatusCode.Created);
         }
 
         [RegistryRoute("manifests/{reference}")]

@@ -16,5 +16,7 @@ namespace SharpCR.Registry
 
 
         void DeleteImage(Image image);
+        void UpdateImage(Image image);
+        void CreateImage(Image image);
     }
 }

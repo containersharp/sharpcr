@@ -14,10 +14,7 @@ namespace SharpCR.Registry.Models
     
     public string Algorithm { get; }
 
-    public string GetHashString() => HexUtility.ToString(_hashBytes); 
-
-    // public bool IsSHA256 => string.Equals(this.Algorithm, "sha256", StringComparison.OrdinalIgnoreCase) || string.Equals(this.Algorithm, "tarsum.v1+sha256", StringComparison.OrdinalIgnoreCase);
-
+    public string GetHashString() => HexUtility.ToString(_hashBytes);
 
     public static bool TryParse(string str, out Digest digest)
     {

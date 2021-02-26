@@ -11,12 +11,12 @@ namespace SharpCR.Registry.Tests
         private List<Image> _images;
         public DataStoreStub(params Image[] images)
         {
-            UpdateImages(images);
+            _images = new List<Image>(images ?? new Image[0]);
+            ImagesUpdated();
         }
 
-        void UpdateImages(IEnumerable<Image> images)
+        void ImagesUpdated()
         {
-            _images = new List<Image>(images ?? new Image[0]);
             _repositories = _images.Select(img => new ImageRepository{ Name = img.RepositoryName}).ToArray();
         }
         
@@ -54,7 +54,20 @@ namespace SharpCR.Registry.Tests
             if (index >= 0)
             {
                 _images.RemoveAt(index);
+                ImagesUpdated();
             }
+        }
+
+        public void UpdateImage(Image image)
+        {
+            DeleteImage(image);
+            CreateImage(image);
+        }
+
+        public void CreateImage(Image image)
+        {
+            _images.Add(image);
+            ImagesUpdated();
         }
     }
 }
