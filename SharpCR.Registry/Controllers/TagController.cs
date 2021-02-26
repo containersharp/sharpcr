@@ -31,7 +31,9 @@ namespace SharpCR.Registry.Controllers
 
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableTags = _imageDataStore.All().Where(img => img.RepositoryName == repo).OrderBy(t => t.Tag);
+            var queryableTags = _imageDataStore.All()
+                .Where(img => string.Equals(img.RepositoryName, repo, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
                 var allTags = queryableTags.Select(t => t.Tag).ToList();

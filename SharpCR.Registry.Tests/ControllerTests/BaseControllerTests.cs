@@ -11,7 +11,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         [Fact]
         public void GetBase()
         {
-            var controller = new BaseController();
+            var controller = new BaseController().SetupHttpContext();
             
             var baseResult = controller.Base();
             

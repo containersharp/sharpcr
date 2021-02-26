@@ -19,4 +19,9 @@
     <ProjectReference Include="..\SharpCR.Registry\SharpCR.Registry.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="ControllerTests\dummymanifest.json" />
+    <EmbeddedResource Include="ControllerTests\dummymanifest.json" />
+  </ItemGroup>
+
 </Project>
