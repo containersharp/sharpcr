@@ -1,10 +1,7 @@
-using System;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
 using SharpCR.Registry.Controllers;
 using SharpCR.Registry.Models;
 using Xunit;
@@ -34,6 +31,33 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.Equal(manifestType, fileResult.ContentType);
             Assert.True(manifestBytes.SequenceEqual(fileResult.FileContents));
         }
+        
+        [Fact]
+        public void DeleteManifest()
+        {
+            const string repositoryName = "foo/abcd";
+            
+            var manifestBytes = Encoding.Default.GetBytes(getImageManifest());
+            var manifestType = "application/vnd.docker.distribution.manifest.v1+json";
+            var dummyImage1 = new Image {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
+            var dummyImage2 = new Image {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
+            var dataStore = new DataStoreStub(dummyImage1, dummyImage2 );
+            
+            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var imageTag = "v1.0.0";
+            var deleteResponse = controller.Delete(repositoryName, imageTag);
+            var statusCodeResult = deleteResponse as StatusCodeResult;
+            
+            Assert.NotNull(statusCodeResult);
+            Assert.Equal(202, statusCodeResult.StatusCode);
+            Assert.Null(dataStore.GetImagesByTag(repositoryName, imageTag));
+            
+            // todo: assert orphan blobs are deleted while referenced blobs are kept. 
+        }
+        
+        
+        
+        
 
         private static string getImageManifest()
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SharpCR.Registry.Models;
@@ -54,9 +55,23 @@ namespace SharpCR.Registry.Controllers
 
         [RegistryRoute("manifests/{reference}")]
         [HttpDelete]
-        public void Delete(string reference)
+        public IActionResult Delete(string repo, string reference)
         {
-            
+            var imageRepo = _dataStore.GetRepository(repo);
+            if (imageRepo == null)
+            {
+                return new NotFoundResult();
+            }
+
+            var image = GetImageByReference(reference, imageRepo.Name);
+            if (image == null)
+            {
+                return new NotFoundResult();
+            }
+
+            _dataStore.DeleteImage(image);
+            // todo: delete all orphan blobs...
+            return new StatusCodeResult((int)HttpStatusCode.Accepted);
         }
 
         private Image GetImageByReference(string reference, string repoName)

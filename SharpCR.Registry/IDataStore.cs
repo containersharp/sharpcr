@@ -15,5 +15,6 @@ namespace SharpCR.Registry
         Image GetImagesByDigest(string repoName, string digestString);
 
 
+        void DeleteImage(Image image);
     }
 }

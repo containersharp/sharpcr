@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using SharpCR.Registry.Models;
 
@@ -6,12 +7,17 @@ namespace SharpCR.Registry.Tests
 {
     public class DataStoreStub : IDataStore
     {
-        private readonly ImageRepository[] _repositories;
-        private readonly Image[] _images;
+        private ImageRepository[] _repositories;
+        private List<Image> _images;
         public DataStoreStub(params Image[] images)
         {
-            _images = images;
-            _repositories = images.Select(img => new ImageRepository{ Name = img.RepositoryName}).ToArray();
+            UpdateImages(images);
+        }
+
+        void UpdateImages(IEnumerable<Image> images)
+        {
+            _images = new List<Image>(images ?? new Image[0]);
+            _repositories = _images.Select(img => new ImageRepository{ Name = img.RepositoryName}).ToArray();
         }
         
         public ImageRepository GetRepository(string repoName)
@@ -40,6 +46,15 @@ namespace SharpCR.Registry.Tests
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(t.DigestString, digestString, StringComparison.OrdinalIgnoreCase));
 
+        }
+
+        public void DeleteImage(Image image)
+        {
+            var index = _images.IndexOf(image);
+            if (index >= 0)
+            {
+                _images.RemoveAt(index);
+            }
         }
     }
 }
