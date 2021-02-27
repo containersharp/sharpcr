@@ -10,7 +10,10 @@ namespace SharpCR.Registry.Models.Manifests
     public abstract class Manifest : Entity
     {
         public int? SchemaVersion { get; set; }
-        public Entity[] Layers { get; protected set; }
+        public Entity[] Layers { get; set; }
+                
+        [JsonIgnore]
+        public byte[] RawJsonBytes { get; protected set; }
 
       protected virtual byte[] GetJsonBytesWithoutSignature()
       {

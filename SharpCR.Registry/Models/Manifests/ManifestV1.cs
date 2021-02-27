@@ -29,8 +29,7 @@ namespace SharpCR.Registry.Models.Manifests
             "application/vnd.docker.distribution.manifest.v1+prettyjws"
           };
         }
-        // todo: application/vnd.oci.image.index.v1+json
-        // todo: application/vnd.oci.image.manifest.v1+json
+
         public Manifest Parse(byte[] jsonBytes)
         {
           using var ms = new MemoryStream(jsonBytes, false);
