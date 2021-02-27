@@ -15,16 +15,16 @@ namespace SharpCR.Registry.Tests.ControllerTests
         [Fact]
         public void GetManifest()
         {
-            var dummyImageRepo2 = new RepositoryRecord {Name = "foo/abcd"};
+            var repositoryName = "foo/abcd";
             var manifestBytes = Encoding.Default.GetBytes(getImageManifest());
             var manifestType = "application/vnd.docker.distribution.manifest.v1+json";
-            var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = dummyImageRepo2.Name, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
-            var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = dummyImageRepo2.Name, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
+            var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
+            var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             
             var controller = new ManifestController(new DataStoreStub(dummyImage1, dummyImage2 )).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
-            var manifestResponse = controller.Get(dummyImageRepo2.Name, "v1.0.0");
+            var manifestResponse = controller.Get(repositoryName, "v1.0.0");
             var fileResult = manifestResponse as FileContentResult;
             
             Assert.NotNull(fileResult);

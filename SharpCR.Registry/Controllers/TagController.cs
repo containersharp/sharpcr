@@ -21,12 +21,6 @@ namespace SharpCR.Registry.Controllers
         [HttpGet]
         public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
-            var imageRepo = _dataStore.GetRepository(repo);
-            if (imageRepo == null)
-            {
-                return new NotFoundResult();
-            }
-
             n ??= 0;
             IEnumerable<string> returnList = null;
             var queryableImages = _dataStore.ListImages(repo).OrderBy(t => t.Tag);
@@ -44,7 +38,7 @@ namespace SharpCR.Registry.Controllers
             returnList = n > 0 ? returnList.Take(n.Value) : returnList;
             return new TagListResponse
             {
-                name = imageRepo.Name,
+                name = repo,
                 tags = returnList.ToList()
             };
         }

@@ -7,9 +7,7 @@ namespace SharpCR.Registry
 {
     public interface IDataStore
     {
-        RepositoryRecord GetRepository(string repoName);
-        void CreateRepository(string repo);
-        
+       
         IQueryable<ImageRecord> ListImages(string repoName);
         
         ImageRecord GetImagesByTag(string repoName, string tag);

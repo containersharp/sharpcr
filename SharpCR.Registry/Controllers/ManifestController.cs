@@ -34,13 +34,7 @@ namespace SharpCR.Registry.Controllers
         [HttpHead]
         public ActionResult Get(string repo, string reference)
         {
-            var imageRepo = _dataStore.GetRepository(repo);
-            if (imageRepo == null)
-            {
-                return new NotFoundResult();
-            }
-
-            var image = GetImageByReference(reference, imageRepo.Name);
+            var image = GetImageByReference(reference, repo);
             if (image == null)
             {
                 return new NotFoundResult();
@@ -98,13 +92,7 @@ namespace SharpCR.Registry.Controllers
 
             var existingImage = queriedTag != null ?  _dataStore.GetImagesByTag(repo, queriedTag) : null;
             if (existingImage == null)
-            {
-                var existingRepository = _dataStore.GetRepository(repo);
-                if (existingRepository == null)
-                {
-                    _dataStore.CreateRepository(repo);
-                }
-                
+            {   
                 var image = new ImageRecord
                 {
                     RepositoryName = repo,
@@ -132,13 +120,7 @@ namespace SharpCR.Registry.Controllers
         [HttpDelete]
         public IActionResult Delete(string repo, string reference)
         {
-            var imageRepo = _dataStore.GetRepository(repo);
-            if (imageRepo == null)
-            {
-                return new NotFoundResult();
-            }
-
-            var image = GetImageByReference(reference, imageRepo.Name);
+            var image = GetImageByReference(reference, repo);
             if (image == null)
             {
                 return new NotFoundResult();
