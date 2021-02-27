@@ -94,7 +94,8 @@ namespace SharpCR.Registry.Controllers
                     RepositoryName = repo,
                     Tag = queriedTag,
                     DigestString = pushedDigest,
-                    ManifestBytes = manifest.RawJsonBytes
+                    ManifestBytes = manifest.RawJsonBytes,
+                    ManifestMediaType = manifest.MediaType
                 };
                 _dataStore.CreateImage(image);
             }
@@ -102,6 +103,7 @@ namespace SharpCR.Registry.Controllers
             {
                 existingImage.DigestString = pushedDigest;
                 existingImage.ManifestBytes = manifestBytes;
+                existingImage.ManifestMediaType = manifest.MediaType;
                 _dataStore.UpdateImage(existingImage);
             }
             // todo: check all the blobs are well received.

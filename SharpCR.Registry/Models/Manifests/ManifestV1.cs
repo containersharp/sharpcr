@@ -70,7 +70,7 @@ namespace SharpCR.Registry.Models.Manifests
             manifest.Layers = layers;
           }
 
-          manifest.Digest = manifest.ComputeDigest().GetHashString();
+          manifest.Digest = manifest.ComputeDigest().ToString();
           return manifest;
         }
 

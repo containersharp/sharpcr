@@ -1,11 +1,7 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace SharpCR.Registry.Models.Manifests
 {
@@ -34,7 +30,7 @@ namespace SharpCR.Registry.Models.Manifests
                 }
 
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.ComputeDigest().GetHashString();
+                manifest.Digest = manifest.ComputeDigest().ToString();
                 return manifest;
             }
 

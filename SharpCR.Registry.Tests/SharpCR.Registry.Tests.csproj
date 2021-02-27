@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="ControllerTests\dummymanifest.json" />
-    <EmbeddedResource Include="ControllerTests\dummymanifest.json" />
+    <None Remove="ControllerTests\manifest.v2.json" />
+    <EmbeddedResource Include="ControllerTests\manifest.v2.json" />
   </ItemGroup>
 
 </Project>

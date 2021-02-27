@@ -31,7 +31,7 @@ namespace SharpCR.Registry.Models.Manifests
                 }
 
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.ComputeDigest().GetHashString();
+                manifest.Digest = manifest.ComputeDigest().ToString();
                 return manifest;
             }
 

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 using Xunit;
 
@@ -16,8 +15,8 @@ namespace SharpCR.Registry.Tests.ControllerTests
         public void GetManifest()
         {
             var repositoryName = "foo/abcd";
-            var manifestBytes = Encoding.Default.GetBytes(getImageManifest());
-            var manifestType = "application/vnd.docker.distribution.manifest.v1+json";
+            var manifestBytes = Encoding.Default.GetBytes(getImageManifest("manifest.v2.json"));
+            var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             
@@ -37,33 +36,58 @@ namespace SharpCR.Registry.Tests.ControllerTests
         public void DeleteManifest()
         {
             const string repositoryName = "foo/abcd";
-            
-            var manifestBytes = Encoding.Default.GetBytes(getImageManifest());
-            var manifestType = "application/vnd.docker.distribution.manifest.v1+json";
+            const string imageTag = "v1.0.0";
+            var manifestBytes = Encoding.Default.GetBytes(getImageManifest("manifest.v2.json"));
+            var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             var dataStore = new DataStoreStub(dummyImage1, dummyImage2 );
             
             var controller = new ManifestController(dataStore).SetupHttpContext();
-            var imageTag = "v1.0.0";
             var deleteResponse = controller.Delete(repositoryName, imageTag);
             var statusCodeResult = deleteResponse as StatusCodeResult;
             
             Assert.NotNull(statusCodeResult);
             Assert.Equal(202, statusCodeResult.StatusCode);
             Assert.Null(dataStore.GetImagesByTag(repositoryName, imageTag));
+        }
+        
+        [Fact]
+        public void PutManifest_V2_Schema()
+        {
+            var manifestBytes = Encoding.Default.GetBytes(getImageManifest("manifest.v2.json"));
+            var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
+            var dataStore = new DataStoreStub();
             
-            // todo: assert orphan blobs are deleted while referenced blobs are kept. 
+            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var request = controller.Request;
+            request.Headers.Add("Content-Type", manifestType);
+            request.Body = new MemoryStream(manifestBytes);
+            
+            const string repositoryName = "foo/abcd";
+            const string imageTag = "v1.0.0";
+            var putResponse = controller.Save(repositoryName, imageTag);
+            var statusCodeResult = putResponse as StatusCodeResult;
+            var storedImage = dataStore.GetImagesByTag(repositoryName, imageTag);
+            
+            Assert.NotNull(statusCodeResult);
+            Assert.Equal(201, statusCodeResult.StatusCode);
+            Assert.Equal(controller.Response.Headers["Docker-Content-Digest"].ToString(), storedImage.DigestString); 
+            Assert.True(!string.IsNullOrWhiteSpace(controller.Response.Headers["Location"].ToString())); 
+            Assert.NotNull(storedImage); 
+            Assert.Equal(manifestType, storedImage.ManifestMediaType); 
         }
         
         
         
-        
+            
+        // todo: assert orphan blobs are deleted when deleting manifest while referenced blobs are kept. 
+        // todo: test more put cases 
 
-        private static string getImageManifest()
+        private static string getImageManifest(string name)
         {
             using var stream = typeof(ManifestControllerTests).Assembly.GetManifestResourceStream(
-                    "SharpCR.Registry.Tests.ControllerTests.dummymanifest.json");
+                    $"SharpCR.Registry.Tests.ControllerTests.{name}");
             using var sr = new StreamReader(stream!);
             return sr.ReadToEnd();
 
