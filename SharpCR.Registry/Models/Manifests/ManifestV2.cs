@@ -5,6 +5,14 @@ using Newtonsoft.Json;
 
 namespace SharpCR.Registry.Models.Manifests
 {
+    /// <summary>
+    /// Represent an image manifest.
+    /// Docker v2 schemaVersion is identical to OCI v1
+    /// </summary>
+    /// <remarks>
+    /// Docker documentation: https://docs.docker.com/registry/spec/manifest-v2-2/
+    /// OCI specification: https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md
+    /// </remarks>
     public class ManifestV2: Manifest
     {
         public ManifestV2(byte[] rawBytes)
@@ -54,5 +62,3 @@ namespace SharpCR.Registry.Models.Manifests
         }
     }
 }
-
-// org.opencontainers.image.ref.name

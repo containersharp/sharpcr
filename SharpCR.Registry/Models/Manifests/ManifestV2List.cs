@@ -5,6 +5,13 @@ using Newtonsoft.Json;
 
 namespace SharpCR.Registry.Models.Manifests
 {
+    /// <summary>
+    /// Represent a manifest-list-type of manifest. That is also an OCI image index.
+    /// </summary>
+    /// <remarks>
+    /// Docker documentation: https://docs.docker.com/registry/spec/manifest-v2-2/#manifest-list
+    /// OCI specification: https://github.com/opencontainers/image-spec/blob/v1.0.1/image-index.md
+    /// </remarks>
     public class ManifestV2List : Manifest
     {
         public ManifestV2List(byte[] rawBytes)

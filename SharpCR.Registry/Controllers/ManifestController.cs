@@ -92,7 +92,7 @@ namespace SharpCR.Registry.Controllers
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
             
-            var existingImage = queriedTag != null ?  _dataStore.GetImagesByTag(repo, queriedTag) : null;
+            var existingImage = queriedTag != null ?  _dataStore.GetImageByTag(repo, queriedTag) : null;
             if (existingImage == null)
             {   
                 var image = new ImageRecord
@@ -152,7 +152,7 @@ namespace SharpCR.Registry.Controllers
         {
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
-                return (null != _dataStore.GetImagesByDigest(repoName, referencedItem.Digest));
+                return (null != _dataStore.GetImageByDigest(repoName, referencedItem.Digest));
             }
 
             return _blobStorage.BlobExists(referencedItem);
@@ -161,8 +161,8 @@ namespace SharpCR.Registry.Controllers
         private ImageRecord GetImageByReference(string reference, string repoName)
         {
             return Digest.TryParse(reference, out _) 
-                ? _dataStore.GetImagesByDigest(repoName, reference) 
-                : _dataStore.GetImagesByTag(repoName, reference);
+                ? _dataStore.GetImageByDigest(repoName, reference) 
+                : _dataStore.GetImageByTag(repoName, reference);
         }
     }
 }

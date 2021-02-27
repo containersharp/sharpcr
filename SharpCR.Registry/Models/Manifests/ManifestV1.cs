@@ -6,6 +6,12 @@ using Newtonsoft.Json.Linq;
 
 namespace SharpCR.Registry.Models.Manifests
 {
+    /// <summary>
+    /// Represents a legacy version of Docker image manifest
+    /// </summary>
+    /// <remarks>
+    /// Docker documentation at: https://docs.docker.com/registry/spec/manifest-v2-1/
+    /// </remarks>
     public class ManifestV1: Manifest
     {
       public string Name { get; private set; }

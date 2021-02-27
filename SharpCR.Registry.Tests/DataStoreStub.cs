@@ -20,14 +20,14 @@ namespace SharpCR.Registry.Tests
                 .AsQueryable();
         }
 
-        public ImageRecord GetImagesByTag(string repoName, string tag)
+        public ImageRecord GetImageByTag(string repoName, string tag)
         {
             return _images.FirstOrDefault(t =>
                     string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(t.Tag, tag, StringComparison.OrdinalIgnoreCase));
         }
 
-        public ImageRecord GetImagesByDigest(string repoName, string digestString)
+        public ImageRecord GetImageByDigest(string repoName, string digestString)
         {
             return _images.FirstOrDefault(t =>
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)

@@ -1,6 +1,4 @@
-using System;
 using System.Linq;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry
@@ -9,9 +7,9 @@ namespace SharpCR.Registry
     {
         IQueryable<ImageRecord> ListImages(string repoName);
         
-        ImageRecord GetImagesByTag(string repoName, string tag);
+        ImageRecord GetImageByTag(string repoName, string tag);
         
-        ImageRecord GetImagesByDigest(string repoName, string digestString);
+        ImageRecord GetImageByDigest(string repoName, string digestString);
 
         void DeleteImage(ImageRecord imageRecord);
         void UpdateImage(ImageRecord imageRecord);

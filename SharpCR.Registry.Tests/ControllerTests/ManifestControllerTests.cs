@@ -49,7 +49,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             
             Assert.NotNull(statusCodeResult);
             Assert.Equal(202, statusCodeResult.StatusCode);
-            Assert.Null(dataStore.GetImagesByTag(repositoryName, imageTag));
+            Assert.Null(dataStore.GetImageByTag(repositoryName, imageTag));
         }
         
         [Fact]
@@ -68,7 +68,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             const string imageTag = "v1.0.0";
             var putResponse = controller.Save(repositoryName, imageTag);
             var statusCodeResult = putResponse as StatusCodeResult;
-            var storedImage = dataStore.GetImagesByTag(repositoryName, imageTag);
+            var storedImage = dataStore.GetImageByTag(repositoryName, imageTag);
             
             Assert.NotNull(statusCodeResult);
             Assert.Equal(201, statusCodeResult.StatusCode);

@@ -26,7 +26,14 @@ namespace SharpCR.Registry.Models
        
     }
     
-    public class WellKnownMediaTypes
+    /// <summary>
+    /// Many of the wellknown types defined by Docker and OCI
+    /// </summary>
+    /// <remarks>
+    /// Docker doc at: https://docs.docker.com/registry/spec/manifest-v2-2/#media-types
+    /// OCI doc at: https://github.com/opencontainers/image-spec/blob/master/media-types.md
+    /// </remarks>
+    public static class WellKnownMediaTypes
     {
         public const string DockerImageManifestV1 = "application/vnd.docker.distribution.manifest.v1+json";
         
