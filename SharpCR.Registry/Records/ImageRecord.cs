@@ -1,8 +1,6 @@
-using System;
-
-namespace SharpCR.Registry.Models
+namespace SharpCR.Registry.Records
 {
-    public class Image
+    public class ImageRecord
     {
         public string DigestString { get; set; }
         public string RepositoryName { get; set; }

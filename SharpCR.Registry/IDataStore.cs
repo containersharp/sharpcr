@@ -1,22 +1,23 @@
 using System;
 using System.Linq;
 using SharpCR.Registry.Models;
+using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry
 {
     public interface IDataStore
     {
-        ImageRepository GetRepository(string repoName);
+        RepositoryRecord GetRepository(string repoName);
+        void CreateRepository(string repo);
         
-        IQueryable<Image> ListImages(string repoName);
+        IQueryable<ImageRecord> ListImages(string repoName);
         
-        Image GetImagesByTag(string repoName, string tag);
+        ImageRecord GetImagesByTag(string repoName, string tag);
         
-        Image GetImagesByDigest(string repoName, string digestString);
+        ImageRecord GetImagesByDigest(string repoName, string digestString);
 
-
-        void DeleteImage(Image image);
-        void UpdateImage(Image image);
-        void CreateImage(Image image);
+        void DeleteImage(ImageRecord imageRecord);
+        void UpdateImage(ImageRecord imageRecord);
+        void CreateImage(ImageRecord imageRecord);
     }
 }

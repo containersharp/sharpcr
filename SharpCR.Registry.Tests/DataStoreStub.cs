@@ -2,45 +2,51 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SharpCR.Registry.Models;
+using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry.Tests
 {
     public class DataStoreStub : IDataStore
     {
-        private ImageRepository[] _repositories;
-        private List<Image> _images;
-        public DataStoreStub(params Image[] images)
+        private RepositoryRecord[] _repositories;
+        private List<ImageRecord> _images;
+        public DataStoreStub(params ImageRecord[] images)
         {
-            _images = new List<Image>(images ?? new Image[0]);
+            _images = new List<ImageRecord>(images ?? new ImageRecord[0]);
             ImagesUpdated();
         }
 
         void ImagesUpdated()
         {
-            _repositories = _images.Select(img => new ImageRepository{ Name = img.RepositoryName}).ToArray();
+            _repositories = _images.Select(img => new RepositoryRecord{ Name = img.RepositoryName}).ToArray();
         }
         
-        public ImageRepository GetRepository(string repoName)
+        public RepositoryRecord GetRepository(string repoName)
         {
             return _repositories.FirstOrDefault(r => 
                 string.Equals(repoName, r.Name, StringComparison.OrdinalIgnoreCase));
         }
 
-        public IQueryable<Image> ListImages(string repoName)
+        public void CreateRepository(string repo)
+        {
+            
+        }
+
+        public IQueryable<ImageRecord> ListImages(string repoName)
         {
             return _images
                 .Where(img => string.Equals(img.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
                 .AsQueryable();
         }
 
-        public Image GetImagesByTag(string repoName, string tag)
+        public ImageRecord GetImagesByTag(string repoName, string tag)
         {
             return _images.FirstOrDefault(t =>
                     string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(t.Tag, tag, StringComparison.OrdinalIgnoreCase));
         }
 
-        public Image GetImagesByDigest(string repoName, string digestString)
+        public ImageRecord GetImagesByDigest(string repoName, string digestString)
         {
             return _images.FirstOrDefault(t =>
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
@@ -48,9 +54,9 @@ namespace SharpCR.Registry.Tests
 
         }
 
-        public void DeleteImage(Image image)
+        public void DeleteImage(ImageRecord imageRecord)
         {
-            var index = _images.IndexOf(image);
+            var index = _images.IndexOf(imageRecord);
             if (index >= 0)
             {
                 _images.RemoveAt(index);
@@ -58,15 +64,15 @@ namespace SharpCR.Registry.Tests
             }
         }
 
-        public void UpdateImage(Image image)
+        public void UpdateImage(ImageRecord imageRecord)
         {
-            DeleteImage(image);
-            CreateImage(image);
+            DeleteImage(imageRecord);
+            CreateImage(imageRecord);
         }
 
-        public void CreateImage(Image image)
+        public void CreateImage(ImageRecord imageRecord)
         {
-            _images.Add(image);
+            _images.Add(imageRecord);
             ImagesUpdated();
         }
     }
