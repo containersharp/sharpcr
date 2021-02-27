@@ -18,15 +18,19 @@ namespace SharpCR.Registry.Models.Manifests
       {
         RawJsonBytes = rawBytes;
       }
-
+      public override Descriptor[] GetReferencedDescriptors()
+      {
+        return Layers;
+      }
+      
       public class Parser: IManifestParser
       {
         public string[] GetAcceptableMediaTypes()
         {
-          return new string[]
+          return new[]
           {
-            "application/vnd.docker.distribution.manifest.v1+json",
-            "application/vnd.docker.distribution.manifest.v1+prettyjws"
+            WellKnownMediaTypes.DockerImageManifestV1,
+            WellKnownMediaTypes.DockerImageManifestV1Signed
           };
         }
 
@@ -53,7 +57,7 @@ namespace SharpCR.Registry.Models.Manifests
           };
 
           var signature = manifestGlobalObject.Property("signatures")?.Value;
-          manifest.MediaType = "application/vnd.docker.distribution.manifest.v1+" +  (signature == null ? "json" : "prettyjws");
+          manifest.MediaType = signature == null ? WellKnownMediaTypes.DockerImageManifestV1 : WellKnownMediaTypes.DockerImageManifestV1Signed;
           var layersArray = (JArray) manifestGlobalObject.Property("fsLayers")?.Value;
           if (layersArray != null)
           {
@@ -63,7 +67,7 @@ namespace SharpCR.Registry.Models.Manifests
               var layerObj = (JObject)(layersArray[index]);
               var blobSum = (string) (layerObj.Property("blobSum"));
               Models.Digest.TryParse(blobSum, out _);
-              layers[index] = new Descriptor { MediaType  = "application/vnd.docker.container.image.rootfs.diff+x-gtar", Digest = blobSum};
+              layers[index] = new Descriptor { MediaType  = WellKnownMediaTypes.DockerImageLayerXGTar, Digest = blobSum};
             }
 
             manifest.Layers = layers;
@@ -72,9 +76,7 @@ namespace SharpCR.Registry.Models.Manifests
           manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
           return manifest;
         }
-
       }
-      
     }
 
 }

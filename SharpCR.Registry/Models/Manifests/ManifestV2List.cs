@@ -19,6 +19,11 @@ namespace SharpCR.Registry.Models.Manifests
         public ManifestV2ListItem[] Manifests { get; set; }
 
 
+        public override Descriptor[] GetReferencedDescriptors()
+        {
+            return Manifests;
+        }
+
         public class Parser: IManifestParser
         {
             public Manifest Parse(byte[] jsonBytes)
@@ -39,10 +44,12 @@ namespace SharpCR.Registry.Models.Manifests
             {
                 return new[]
                 {
-                    "application/vnd.docker.distribution.manifest.list.v2+json"
+                    WellKnownMediaTypes.DockerManifestV2List,
+                    WellKnownMediaTypes.OciImageIndexV1
                 };
             }
         }
+
         public class ManifestV2ListItem : Descriptor
         {
             public Platform Platform { get; set; }

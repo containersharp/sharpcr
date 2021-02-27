@@ -18,6 +18,13 @@ namespace SharpCR.Registry.Models.Manifests
         
         public Descriptor Config { get; set; }
         
+        public override Descriptor[] GetReferencedDescriptors()
+        {
+            return Config == null 
+                ? Layers 
+                : Layers.Concat(new[] {Config}).ToArray();
+        }
+        
         public class Parser : IManifestParser
         {
             public Manifest Parse(byte[] jsonBytes)
@@ -40,9 +47,8 @@ namespace SharpCR.Registry.Models.Manifests
             {
                 return new[]
                 {
-                    "application/vnd.docker.distribution.manifest.v2+json",
-                    "application/vnd.oci.image.manifest.v1+json",
-                    "application/vnd.oci.image.index.v1+json"
+                    WellKnownMediaTypes.DockerImageManifestV2,
+                    WellKnownMediaTypes.OciImageManifestV1
                 };
             }
         }

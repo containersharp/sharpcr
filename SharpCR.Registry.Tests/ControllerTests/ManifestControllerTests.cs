@@ -20,7 +20,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             
-            var controller = new ManifestController(new DataStoreStub(dummyImage1, dummyImage2 )).SetupHttpContext();
+            var controller = new ManifestController(new DataStoreStub(dummyImage1, dummyImage2 ), null).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
             var manifestResponse = controller.Get(repositoryName, "v1.0.0");
@@ -43,7 +43,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             var dataStore = new DataStoreStub(dummyImage1, dummyImage2 );
             
-            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var controller = new ManifestController(dataStore, null).SetupHttpContext();
             var deleteResponse = controller.Delete(repositoryName, imageTag);
             var statusCodeResult = deleteResponse as StatusCodeResult;
             
@@ -59,7 +59,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dataStore = new DataStoreStub();
             
-            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var controller = new ManifestController(dataStore, null).SetupHttpContext();
             var request = controller.Request;
             request.Headers.Add("Content-Type", manifestType);
             request.Body = new MemoryStream(manifestBytes);
