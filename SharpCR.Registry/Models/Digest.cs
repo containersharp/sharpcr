@@ -44,5 +44,20 @@ namespace SharpCR.Registry.Models
       return builder.ToString();
     }
 
+    public static Digest Compute(byte[] bytes, HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256)
+    {
+      var algName = hashAlgorithm.ToString();
+      using var algorithm = System.Security.Cryptography.HashAlgorithm.Create(algName);
+      return new Digest(algName.ToLower(), algorithm!.ComputeHash(bytes));
+    }
+    
+
+    public enum HashAlgorithm
+    {
+      // ReSharper disable InconsistentNaming
+      SHA256,
+      SHA512
+    }
+
   }
 }

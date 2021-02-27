@@ -16,7 +16,7 @@ namespace SharpCR.Registry.Models.Manifests
         {
         }
         
-        public Entity Config { get; set; }
+        public Descriptor Config { get; set; }
         
         public class Parser : IManifestParser
         {
@@ -32,7 +32,7 @@ namespace SharpCR.Registry.Models.Manifests
                 // Tag could be included in annotation `org.opencontainers.image.ref.name`
                 // https://github.com/opencontainers/image-spec/blob/master/image-layout.md
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.ComputeDigest().ToString();
+                manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
                 return manifest;
             }
 

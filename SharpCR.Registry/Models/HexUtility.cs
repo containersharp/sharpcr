@@ -11,8 +11,8 @@ namespace SharpCR.Registry.Models
             
             for (var i = 0; i < hashBytes.Length; ++i)
             {
-                var hex1 = HexUtility.FromChar(hexString[i * 2]);
-                var hex2 = HexUtility.FromChar(hexString[i * 2 + 1]);
+                var hex1 = FromChar(hexString[i * 2]);
+                var hex2 = FromChar(hexString[i * 2 + 1]);
                 hashBytes[i] = (byte) (hex1 << 4 | hex2);
             }
 

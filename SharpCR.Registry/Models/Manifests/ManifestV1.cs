@@ -45,7 +45,7 @@ namespace SharpCR.Registry.Models.Manifests
       
           var manifest = new ManifestV1(jsonBytes)
           {
-            Layers = new Entity[0],
+            Layers = new Descriptor[0],
             
             Name = (string)manifestGlobalObject.Property("name"),
             Tag = (string)manifestGlobalObject.Property("tag"),
@@ -57,19 +57,19 @@ namespace SharpCR.Registry.Models.Manifests
           var layersArray = (JArray) manifestGlobalObject.Property("fsLayers")?.Value;
           if (layersArray != null)
           {
-            var layers = new Entity[layersArray.Count];
+            var layers = new Descriptor[layersArray.Count];
             for (var index = 0; index < layers.Length; ++index)
             {
               var layerObj = (JObject)(layersArray[index]);
               var blobSum = (string) (layerObj.Property("blobSum"));
               Models.Digest.TryParse(blobSum, out _);
-              layers[index] = new Entity { MediaType  = "application/vnd.docker.container.image.rootfs.diff+x-gtar", Digest = blobSum};
+              layers[index] = new Descriptor { MediaType  = "application/vnd.docker.container.image.rootfs.diff+x-gtar", Digest = blobSum};
             }
 
             manifest.Layers = layers;
           }
 
-          manifest.Digest = manifest.ComputeDigest().ToString();
+          manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
           return manifest;
         }
 

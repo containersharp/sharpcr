@@ -7,15 +7,22 @@ using Newtonsoft.Json.Linq;
 
 namespace SharpCR.Registry.Models.Manifests
 {
-    public abstract class Manifest : Entity
+    /// <summary>
+    /// Represent a container manifest
+    /// </summary>
+    /// <remarks>
+    /// There should be multiple implementations of this class.
+    /// Please see OCI doc for Manifest: https://github.com/opencontainers/image-spec/blob/master/manifest.md
+    /// </remarks>
+    public abstract class Manifest : Descriptor
     {
         public int? SchemaVersion { get; set; }
-        public Entity[] Layers { get; set; }
-                
+        public Descriptor[] Layers { get; set; }
+        
         [JsonIgnore]
         public byte[] RawJsonBytes { get; protected set; }
 
-      protected virtual byte[] GetJsonBytesWithoutSignature()
+      protected virtual byte[] GetJsonBytesForComputingDigest()
       {
           using var inputStream = new MemoryStream(RawJsonBytes, false);
           using var sReader = new StreamReader(inputStream, Encoding.UTF8);
@@ -40,12 +47,6 @@ namespace SharpCR.Registry.Models.Manifests
 
           manifestGlobalObject.WriteTo(jsonTextWriter);
           return outputStream.ToArray();
-      }
-      
-      public Digest ComputeDigest()
-      {
-          using var sha256 = HashAlgorithm.Create("SHA256");
-          return new Digest("sha256", sha256!.ComputeHash(GetJsonBytesWithoutSignature()));
       }
     }
 }

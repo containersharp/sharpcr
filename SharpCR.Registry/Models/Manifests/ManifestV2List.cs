@@ -31,7 +31,7 @@ namespace SharpCR.Registry.Models.Manifests
                 }
 
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.ComputeDigest().ToString();
+                manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
                 return manifest;
             }
 
@@ -43,7 +43,7 @@ namespace SharpCR.Registry.Models.Manifests
                 };
             }
         }
-        public class ManifestV2ListItem : Entity
+        public class ManifestV2ListItem : Descriptor
         {
             public Platform Platform { get; set; }
         }

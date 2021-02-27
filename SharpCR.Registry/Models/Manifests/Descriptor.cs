@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace SharpCR.Registry.Models.Manifests
 {
-    public class Entity
+    public class Descriptor
     {
         /// <summary>
         /// Content type of the entity
@@ -13,10 +13,12 @@ namespace SharpCR.Registry.Models.Manifests
         /// </remarks>
         public string MediaType { get; set; }
         
-        public int? Size { get; set; }
+        public long? Size { get; set; }
         
         public string Digest { get; set; }
         
         public Dictionary<string, string> Annotations { get; set; }
+        
+        public string[] Urls { get; set; }
     }
 }
