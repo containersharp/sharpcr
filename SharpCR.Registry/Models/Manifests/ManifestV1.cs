@@ -1,6 +1,8 @@
 using System;
-using System.Linq;
-using System.Text.Json;
+using System.IO;
+using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SharpCR.Registry.Models.Manifests
 {
@@ -31,8 +33,12 @@ namespace SharpCR.Registry.Models.Manifests
         // todo: application/vnd.oci.image.manifest.v1+json
         public Manifest Parse(byte[] jsonBytes)
         {
-          var manifestGlobalObject = JsonDocument.Parse(jsonBytes).RootElement;
-          var schemaVersion = manifestGlobalObject.GetProperty("schemaVersion").GetInt32();
+          using var ms = new MemoryStream(jsonBytes, false);
+          using var sReader = new StreamReader(ms, Encoding.UTF8);
+          using var jsonTextReader = new JsonTextReader(sReader);
+          
+          var manifestGlobalObject = JObject.Load(jsonTextReader);
+          var schemaVersion = (int)(manifestGlobalObject.Property("schemaVersion")!.Value);
           if (schemaVersion > 1)
           {
             throw new NotSupportedException("Only version 1 schema version manifests are supported by this parser.");
@@ -41,33 +47,35 @@ namespace SharpCR.Registry.Models.Manifests
           var manifest = new ManifestV1(jsonBytes)
           {
             Layers = new Entity[0],
-            Name = manifestGlobalObject.GetProperty("name").GetString(),
-            Tag = manifestGlobalObject.GetProperty("tag").GetString(),
-            Architecture = manifestGlobalObject.GetProperty("architecture").GetString()
+            
+            Name = (string)manifestGlobalObject.Property("name"),
+            Tag = (string)manifestGlobalObject.Property("tag"),
+            Architecture = (string)manifestGlobalObject.Property("architecture")
           };
 
-          var signature = manifestGlobalObject.TryGetProperty("signatures", out var signatureProp) ? signatureProp.GetString() : null;
+          var signature = manifestGlobalObject.Property("signatures")?.Value;
           manifest.MediaType = "application/vnd.docker.distribution.manifest.v1+" +  (signature == null ? "json" : "prettyjws");
-          if (manifestGlobalObject.TryGetProperty("fsLayers", out var layersArray)  
-              && layersArray.ValueKind == JsonValueKind.Array)
+          var layersArray = (JArray) manifestGlobalObject.Property("fsLayers")?.Value;
+          if (layersArray != null)
           {
-            var layers = new Entity[layersArray.GetArrayLength()];
+            var layers = new Entity[layersArray.Count];
             for (var index = 0; index < layers.Length; ++index)
             {
-              var layerObj = layersArray[index];
-              var blobSum = layerObj.GetProperty("blobSum").GetString();
+              var layerObj = (JObject)(layersArray[index]);
+              var blobSum = (string) (layerObj.Property("blobSum"));
               Models.Digest.TryParse(blobSum, out _);
-              layers[index] = new Entity { MediaType  = "application/vnd.docker.image.rootfs.diff.tar.gzip", Digest = blobSum};
+              layers[index] = new Entity { MediaType  = "application/vnd.docker.container.image.rootfs.diff+x-gtar", Digest = blobSum};
             }
 
             manifest.Layers = layers;
           }
 
-          manifest.Digest = manifest.CalculateDigest().GetHashString();
+          manifest.Digest = manifest.ComputeDigest().GetHashString();
           return manifest;
         }
 
       }
       
     }
+
 }

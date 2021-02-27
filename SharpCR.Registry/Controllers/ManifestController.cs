@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -82,10 +81,7 @@ namespace SharpCR.Registry.Controllers
 
             var manifest = acceptableParser.Parse(manifestBytes);
             var pushedDigest  = manifest.Digest;
-            
-            if (!string.IsNullOrEmpty(queriedDigest) 
-                && !string.IsNullOrEmpty(manifest.Digest) 
-                && !string.Equals(queriedDigest, pushedDigest, StringComparison.Ordinal))
+            if (!string.IsNullOrEmpty(queriedDigest)  && !string.Equals(queriedDigest, pushedDigest, StringComparison.Ordinal))
             {
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
@@ -110,9 +106,8 @@ namespace SharpCR.Registry.Controllers
             }
             // todo: check all the blobs are well received.
             
-            var digest = manifest.CalculateDigest();
             HttpContext.Response.Headers.Add("Location", $"/v2/{repo}/manifests/{reference}");
-            HttpContext.Response.Headers.Add("Docker-Content-Digest", digest.GetHashString());
+            HttpContext.Response.Headers.Add("Docker-Content-Digest", pushedDigest);
             return new StatusCodeResult((int) HttpStatusCode.Created);
         }
 

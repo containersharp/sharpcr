@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace SharpCR.Registry.Models.Manifests
 {
@@ -23,19 +23,15 @@ namespace SharpCR.Registry.Models.Manifests
         {
             public Manifest Parse(byte[] jsonBytes)
             {
-                var manifestGlobalObject = JsonDocument.Parse(jsonBytes).RootElement;
-                var schemaVersion = manifestGlobalObject.GetProperty("schemaVersion").GetInt32();
-                var mediaType = manifestGlobalObject.GetProperty("mediaType").GetString();
-
-                if (schemaVersion != 2 || mediaType != this.GetAcceptableMediaTypes().Single())
+                var manifest = JsonConvert.DeserializeObject<ManifestV2List>(Encoding.UTF8.GetString(jsonBytes));
+                if (manifest.SchemaVersion != 2 || manifest.MediaType != GetAcceptableMediaTypes().Single())
                 {
                     throw new NotSupportedException(
                         "Only version 2 schema version manifest lists are supported by this parser.");
                 }
 
-                var manifest = JsonSerializer.Deserialize<ManifestV2List>(jsonBytes);
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.CalculateDigest().GetHashString();
+                manifest.Digest = manifest.ComputeDigest().GetHashString();
                 return manifest;
             }
 
@@ -57,9 +53,9 @@ namespace SharpCR.Registry.Models.Manifests
             public string Architecture { get; set; }
 
             public string Os { get; set; }
-            [JsonPropertyName("os.version")]
+            [JsonProperty("os.version")]
             public string OsVersion { get; set; }
-            [JsonPropertyName("os.features")]
+            [JsonProperty("os.features")]
             public string OsFeatures { get; set; }
             public string Variant { get; set; }
 

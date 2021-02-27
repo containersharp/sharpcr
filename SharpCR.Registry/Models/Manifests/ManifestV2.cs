@@ -1,6 +1,11 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace SharpCR.Registry.Models.Manifests
 {
@@ -21,18 +26,15 @@ namespace SharpCR.Registry.Models.Manifests
         {
             public Manifest Parse(byte[] jsonBytes)
             {
-                var manifestGlobalObject = JsonDocument.Parse(jsonBytes).RootElement;
-                var schemaVersion = manifestGlobalObject.GetProperty("schemaVersion").GetInt32();
-                var mediaType = manifestGlobalObject.GetProperty("mediaType").GetString();
-                if (schemaVersion != 2 || mediaType != this.GetAcceptableMediaTypes().Single())
+                var manifest = JsonConvert.DeserializeObject<ManifestV2>(Encoding.UTF8.GetString(jsonBytes));
+                if (manifest.SchemaVersion != 2 || manifest.MediaType != GetAcceptableMediaTypes().Single())
                 {
                     throw new NotSupportedException(
                         "Only single version 2 schema version manifest is supported by this parser.");
                 }
 
-                var manifest = JsonSerializer.Deserialize<ManifestV2>(jsonBytes);
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = manifest.CalculateDigest().GetHashString();
+                manifest.Digest = manifest.ComputeDigest().GetHashString();
                 return manifest;
             }
 
