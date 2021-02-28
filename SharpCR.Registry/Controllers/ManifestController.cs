@@ -16,13 +16,13 @@ namespace SharpCR.Registry.Controllers
     {
         // todo: add logging
         // todo: handling errors
-        private readonly IDataStore _dataStore;
+        private readonly IRecordStore _recordStore;
         private readonly IBlobStorage _blobStorage;
         private readonly Lazy<Dictionary<string, IManifestParser>> _manifestParsers;
 
-        public ManifestController(IDataStore dataStore, IBlobStorage blobStorage)
+        public ManifestController(IRecordStore recordStore, IBlobStorage blobStorage)
         {
-            _dataStore = dataStore;
+            _recordStore = recordStore;
             _blobStorage = blobStorage;
             _manifestParsers = new Lazy<Dictionary<string, IManifestParser>>(InitializeManifestParsers);
         }
@@ -92,7 +92,7 @@ namespace SharpCR.Registry.Controllers
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
             
-            var existingArtifact = queriedTag != null ?  _dataStore.GetArtifactByTag(repo, queriedTag) : null;
+            var existingArtifact = queriedTag != null ?  _recordStore.GetArtifactByTag(repo, queriedTag) : null;
             if (existingArtifact == null)
             {   
                 var artifact = new ArtifactRecord
@@ -103,14 +103,14 @@ namespace SharpCR.Registry.Controllers
                     ManifestBytes = manifest.RawJsonBytes,
                     ManifestMediaType = manifest.MediaType
                 };
-                _dataStore.CreateArtifact(artifact);
+                _recordStore.CreateArtifact(artifact);
             }
             else
             {
                 existingArtifact.DigestString = pushedDigest;
                 existingArtifact.ManifestBytes = manifestBytes;
                 existingArtifact.ManifestMediaType = manifest.MediaType;
-                _dataStore.UpdateArtifact(existingArtifact);
+                _recordStore.UpdateArtifact(existingArtifact);
                 // todo: cleanup replaced blobs...
             }
             
@@ -129,7 +129,7 @@ namespace SharpCR.Registry.Controllers
                 return new NotFoundResult();
             }
 
-            _dataStore.DeleteArtifact(artifact);
+            _recordStore.DeleteArtifact(artifact);
             // todo: delete all orphan blobs...
             return new StatusCodeResult((int)HttpStatusCode.Accepted);
         }
@@ -152,7 +152,7 @@ namespace SharpCR.Registry.Controllers
         {
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
-                return (null != _dataStore.GetArtifactByDigest(repoName, referencedItem.Digest));
+                return (null != _recordStore.GetArtifactByDigest(repoName, referencedItem.Digest));
             }
 
             return _blobStorage.BlobExists(referencedItem);
@@ -161,8 +161,8 @@ namespace SharpCR.Registry.Controllers
         private ArtifactRecord GetArtifactByReference(string reference, string repoName)
         {
             return Digest.TryParse(reference, out _) 
-                ? _dataStore.GetArtifactByDigest(repoName, reference) 
-                : _dataStore.GetArtifactByTag(repoName, reference);
+                ? _recordStore.GetArtifactByDigest(repoName, reference) 
+                : _recordStore.GetArtifactByTag(repoName, reference);
         }
     }
 }

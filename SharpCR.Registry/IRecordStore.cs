@@ -3,7 +3,7 @@ using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry
 {
-    public interface IDataStore
+    public interface IRecordStore
     {
         IQueryable<ArtifactRecord> ListArtifact(string repoName);
         

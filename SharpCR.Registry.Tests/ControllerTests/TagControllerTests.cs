@@ -15,7 +15,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repoName};
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repoName};
             
-            var controller = new TagController(new DataStoreStub(dummyArtifact1, dummyArtifact2));
+            var controller = new TagController(new RecordStoreStub(dummyArtifact1, dummyArtifact2));
 
             var tagResponse = controller.List(repoName, 1, null);
             

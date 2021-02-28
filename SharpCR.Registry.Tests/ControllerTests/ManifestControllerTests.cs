@@ -20,7 +20,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
             
-            var controller = new ManifestController(new DataStoreStub(dummyArtifact1, dummyArtifact2 ), null).SetupHttpContext();
+            var controller = new ManifestController(new RecordStoreStub(dummyArtifact1, dummyArtifact2 ), null).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
             var manifestResponse = controller.Get(repositoryName, "v1.0.0");
@@ -41,7 +41,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType };
-            var dataStore = new DataStoreStub(dummyArtifact1, dummyArtifact2 );
+            var dataStore = new RecordStoreStub(dummyArtifact1, dummyArtifact2 );
             
             var controller = new ManifestController(dataStore, null).SetupHttpContext();
             var deleteResponse = controller.Delete(repositoryName, tag);
@@ -57,7 +57,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         {
             var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
-            var dataStore = new DataStoreStub();
+            var dataStore = new RecordStoreStub();
             
             var controller = new ManifestController(dataStore, null).SetupHttpContext();
             var request = controller.Request;

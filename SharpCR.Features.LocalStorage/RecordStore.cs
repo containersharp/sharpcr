@@ -12,7 +12,7 @@ using SharpCR.Registry.Records;
 
 namespace SharpCR.Features.LocalStorage
 {
-    public class RecordStore: IDataStore
+    public class RecordStore: IRecordStore
     {
         private readonly LocalStorageConfiguration _config;
         private HashSet<ArtifactRecord> _allRecords;

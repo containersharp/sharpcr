@@ -10,7 +10,7 @@ namespace SharpCR.Features.LocalStorage
     {
         public void ConfigureServices(IServiceCollection services, StartupContext context)
         {
-            services.AddSingleton<IDataStore, RecordStore>();
+            services.AddSingleton<IRecordStore, RecordStore>();
         }
 
         public void ConfigureWebAppPipeline(IApplicationBuilder app, IServiceProvider appServices, StartupContext context)

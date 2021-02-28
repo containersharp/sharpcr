@@ -5,10 +5,10 @@ using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry.Tests
 {
-    public class DataStoreStub : IDataStore
+    public class RecordStoreStub : IRecordStore
     {
         private readonly List<ArtifactRecord> _artifacts;
-        public DataStoreStub(params ArtifactRecord[] artifacts)
+        public RecordStoreStub(params ArtifactRecord[] artifacts)
         {
             _artifacts = new List<ArtifactRecord>(artifacts ?? new ArtifactRecord[0]);
         }

@@ -9,11 +9,11 @@ namespace SharpCR.Registry.Controllers
 {
     public class TagController
     {
-        private readonly IDataStore _dataStore;
+        private readonly IRecordStore _recordStore;
 
-        public TagController(IDataStore dataStore)
+        public TagController(IRecordStore recordStore)
         {
-            _dataStore = dataStore;
+            _recordStore = recordStore;
         }
         
         
@@ -23,7 +23,7 @@ namespace SharpCR.Registry.Controllers
         {
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableArtifacts = _dataStore.ListArtifact(repo).OrderBy(t => t.Tag);
+            var queryableArtifacts = _recordStore.ListArtifact(repo).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
                 var allTags = queryableArtifacts.Select(t => t.Tag).ToList();
