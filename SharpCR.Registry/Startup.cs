@@ -14,15 +14,12 @@ namespace SharpCR.Registry
         private readonly IReadOnlyList<IFeature> _loadedFeatures;
         private readonly StartupContext _context;
 
-        public Startup(IConfiguration configuration, 
-            IWebHostEnvironment webHostEnvironment,
-            IHostEnvironment hostEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
         {
             _context = new StartupContext
             {
                 Configuration = configuration,
-                WebHostEnvironment = webHostEnvironment,
-                HostEnvironment = hostEnvironment
+                HostEnvironment = webHostEnvironment
             };
             
             _loadedFeatures = FeatureLoader.LoadFeatures(configuration);
@@ -38,7 +35,7 @@ namespace SharpCR.Registry
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IServiceProvider services)
         {
-            if (_context.WebHostEnvironment.IsDevelopment())
+            if (_context.HostEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }

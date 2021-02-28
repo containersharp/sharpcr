@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using SharpCR.Registry;
 using SharpCR.Registry.Records;
@@ -19,9 +20,12 @@ namespace SharpCR.Features.LocalStorage
         private readonly ReaderWriterLock _locker = new ReaderWriterLock();
         private static readonly TimeSpan LockerTimeout = TimeSpan.FromMilliseconds(50);
 
-        public RecordStore(IOptions<LocalStorageConfiguration> config)
+        public RecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> config)
         {
-            _config = config.Value ?? new LocalStorageConfiguration();
+            _config = config.Value ?? new LocalStorageConfiguration()
+            {
+                BasePath = environment.WebRootPath
+            };
             ReadFromFile();
         }
 
@@ -119,12 +123,13 @@ namespace SharpCR.Features.LocalStorage
             var  dataFile = Path.Combine(_config.BasePath, _config.FileName);
             if (!File.Exists(dataFile))
             {
+                _allRecords = new HashSet<ArtifactRecord>();
                 return;
             }
             
             using var fs = File.OpenRead(dataFile);
             var bytes = File.ReadAllBytes(dataFile);
-            var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes);
+            var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             _allRecords = storedObject.Artifacts.ToHashSet();
         }
         
@@ -139,14 +144,15 @@ namespace SharpCR.Features.LocalStorage
             {
                 WriteResource(() =>
                 {
+                    var dataObjects = new DataObjects
+                    {
+                        Artifacts = _allRecords.ToArray()
+                    };
+                    
                     var dataFile = Path.Combine(_config.BasePath, _config.FileName);
                     using var fs = File.OpenWrite(dataFile);
                     using var utf8JsonWriter = new Utf8JsonWriter(fs);
-                    JsonSerializer.Serialize(utf8JsonWriter,
-                        new DataObjects
-                        {
-                            Artifacts = _allRecords.ToArray()
-                        });
+                    JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
                 });
             });
         }

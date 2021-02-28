@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SharpCR.Features.LocalStorage\SharpCR.Features.LocalStorage.csproj" />
     <ProjectReference Include="..\SharpCR.Registry\SharpCR.Registry.csproj" />
   </ItemGroup>
 
