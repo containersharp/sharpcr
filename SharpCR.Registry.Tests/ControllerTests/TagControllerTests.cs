@@ -12,10 +12,10 @@ namespace SharpCR.Registry.Tests.ControllerTests
         public void ListTags()
         {
             var repoName = "foo/abcd";
-            var dummyImage1 = new ImageRecord {Tag = "z1.0.0", RepositoryName = repoName};
-            var dummyImage2 = new ImageRecord {Tag = "v1.0.0", RepositoryName = repoName};
+            var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repoName};
+            var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repoName};
             
-            var controller = new TagController(new DataStoreStub(dummyImage1, dummyImage2));
+            var controller = new TagController(new DataStoreStub(dummyArtifact1, dummyArtifact2));
 
             var tagResponse = controller.List(repoName, 1, null);
             

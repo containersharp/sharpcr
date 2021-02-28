@@ -32,22 +32,22 @@ namespace SharpCR.Registry.Controllers
         [HttpHead]
         public ActionResult Get(string repo, string reference)
         {
-            var image = GetImageByReference(reference, repo);
-            if (image == null)
+            var artifact = GetArtifactByReference(reference, repo);
+            if (artifact == null)
             {
                 return new NotFoundResult();
             }
 
-            HttpContext.Response.Headers.Add("Docker-Content-Digest", image.DigestString);
+            HttpContext.Response.Headers.Add("Docker-Content-Digest", artifact.DigestString);
             
-            var manifestBytes = image.ManifestBytes;
+            var manifestBytes = artifact.ManifestBytes;
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
             if (writeFile)
             {
-                return new FileContentResult(manifestBytes, MediaTypeHeaderValue.Parse(image.ManifestMediaType));
+                return new FileContentResult(manifestBytes, MediaTypeHeaderValue.Parse(artifact.ManifestMediaType));
             }
 
-            HttpContext.Response.Headers.Add("Content-Type", image.ManifestMediaType);
+            HttpContext.Response.Headers.Add("Content-Type", artifact.ManifestMediaType);
             HttpContext.Response.Headers.Add("Content-Length", manifestBytes.Length.ToString());
             return new EmptyResult();
         }
@@ -92,10 +92,10 @@ namespace SharpCR.Registry.Controllers
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
             
-            var existingImage = queriedTag != null ?  _dataStore.GetImageByTag(repo, queriedTag) : null;
-            if (existingImage == null)
+            var existingArtifact = queriedTag != null ?  _dataStore.GetArtifactByTag(repo, queriedTag) : null;
+            if (existingArtifact == null)
             {   
-                var image = new ImageRecord
+                var artifact = new ArtifactRecord
                 {
                     RepositoryName = repo,
                     Tag = queriedTag,
@@ -103,14 +103,14 @@ namespace SharpCR.Registry.Controllers
                     ManifestBytes = manifest.RawJsonBytes,
                     ManifestMediaType = manifest.MediaType
                 };
-                _dataStore.CreateImage(image);
+                _dataStore.CreateArtifact(artifact);
             }
             else
             {
-                existingImage.DigestString = pushedDigest;
-                existingImage.ManifestBytes = manifestBytes;
-                existingImage.ManifestMediaType = manifest.MediaType;
-                _dataStore.UpdateImage(existingImage);
+                existingArtifact.DigestString = pushedDigest;
+                existingArtifact.ManifestBytes = manifestBytes;
+                existingArtifact.ManifestMediaType = manifest.MediaType;
+                _dataStore.UpdateArtifact(existingArtifact);
                 // todo: cleanup replaced blobs...
             }
             
@@ -123,13 +123,13 @@ namespace SharpCR.Registry.Controllers
         [HttpDelete]
         public IActionResult Delete(string repo, string reference)
         {
-            var image = GetImageByReference(reference, repo);
-            if (image == null)
+            var artifact = GetArtifactByReference(reference, repo);
+            if (artifact == null)
             {
                 return new NotFoundResult();
             }
 
-            _dataStore.DeleteImage(image);
+            _dataStore.DeleteArtifact(artifact);
             // todo: delete all orphan blobs...
             return new StatusCodeResult((int)HttpStatusCode.Accepted);
         }
@@ -152,17 +152,17 @@ namespace SharpCR.Registry.Controllers
         {
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
-                return (null != _dataStore.GetImageByDigest(repoName, referencedItem.Digest));
+                return (null != _dataStore.GetArtifactByDigest(repoName, referencedItem.Digest));
             }
 
             return _blobStorage.BlobExists(referencedItem);
         }
 
-        private ImageRecord GetImageByReference(string reference, string repoName)
+        private ArtifactRecord GetArtifactByReference(string reference, string repoName)
         {
             return Digest.TryParse(reference, out _) 
-                ? _dataStore.GetImageByDigest(repoName, reference) 
-                : _dataStore.GetImageByTag(repoName, reference);
+                ? _dataStore.GetArtifactByDigest(repoName, reference) 
+                : _dataStore.GetArtifactByTag(repoName, reference);
         }
     }
 }

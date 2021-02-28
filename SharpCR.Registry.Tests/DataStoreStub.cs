@@ -7,52 +7,52 @@ namespace SharpCR.Registry.Tests
 {
     public class DataStoreStub : IDataStore
     {
-        private readonly List<ImageRecord> _images;
-        public DataStoreStub(params ImageRecord[] images)
+        private readonly List<ArtifactRecord> _artifacts;
+        public DataStoreStub(params ArtifactRecord[] artifacts)
         {
-            _images = new List<ImageRecord>(images ?? new ImageRecord[0]);
+            _artifacts = new List<ArtifactRecord>(artifacts ?? new ArtifactRecord[0]);
         }
 
-        public IQueryable<ImageRecord> ListImages(string repoName)
+        public IQueryable<ArtifactRecord> ListArtifact(string repoName)
         {
-            return _images
-                .Where(img => string.Equals(img.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
+            return _artifacts
+                .Where(artifact => string.Equals(artifact.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
                 .AsQueryable();
         }
 
-        public ImageRecord GetImageByTag(string repoName, string tag)
+        public ArtifactRecord GetArtifactByTag(string repoName, string tag)
         {
-            return _images.FirstOrDefault(t =>
+            return _artifacts.FirstOrDefault(t =>
                     string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(t.Tag, tag, StringComparison.OrdinalIgnoreCase));
         }
 
-        public ImageRecord GetImageByDigest(string repoName, string digestString)
+        public ArtifactRecord GetArtifactByDigest(string repoName, string digestString)
         {
-            return _images.FirstOrDefault(t =>
+            return _artifacts.FirstOrDefault(t =>
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(t.DigestString, digestString, StringComparison.OrdinalIgnoreCase));
 
         }
 
-        public void DeleteImage(ImageRecord imageRecord)
+        public void DeleteArtifact(ArtifactRecord artifactRecord)
         {
-            var index = _images.IndexOf(imageRecord);
+            var index = _artifacts.IndexOf(artifactRecord);
             if (index >= 0)
             {
-                _images.RemoveAt(index);
+                _artifacts.RemoveAt(index);
             }
         }
 
-        public void UpdateImage(ImageRecord imageRecord)
+        public void UpdateArtifact(ArtifactRecord artifactRecord)
         {
-            DeleteImage(imageRecord);
-            CreateImage(imageRecord);
+            DeleteArtifact(artifactRecord);
+            CreateArtifact(artifactRecord);
         }
 
-        public void CreateImage(ImageRecord imageRecord)
+        public void CreateArtifact(ArtifactRecord artifactRecord)
         {
-            _images.Add(imageRecord);
+            _artifacts.Add(artifactRecord);
         }
     }
 }

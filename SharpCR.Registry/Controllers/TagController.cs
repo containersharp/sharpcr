@@ -23,10 +23,10 @@ namespace SharpCR.Registry.Controllers
         {
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableImages = _dataStore.ListImages(repo).OrderBy(t => t.Tag);
+            var queryableArtifacts = _dataStore.ListArtifact(repo).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
-                var allTags = queryableImages.Select(t => t.Tag).ToList();
+                var allTags = queryableArtifacts.Select(t => t.Tag).ToList();
                 var indexOfLast = allTags.FindIndex(t => string.Equals(t, last, StringComparison.OrdinalIgnoreCase));
                 if (indexOfLast >= 0)
                 {
@@ -34,7 +34,7 @@ namespace SharpCR.Registry.Controllers
                 }
             }
             
-            returnList ??= queryableImages.Select(t => t.Tag).ToList();
+            returnList ??= queryableArtifacts.Select(t => t.Tag).ToList();
             returnList = n > 0 ? returnList.Take(n.Value) : returnList;
             return new TagListResponse
             {

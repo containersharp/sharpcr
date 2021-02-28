@@ -1,6 +1,6 @@
 namespace SharpCR.Registry.Records
 {
-    public class ImageRecord
+    public class ArtifactRecord
     {
         public string DigestString { get; set; }
         public string RepositoryName { get; set; }
