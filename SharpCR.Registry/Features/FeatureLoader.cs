@@ -37,19 +37,21 @@ namespace SharpCR.Registry.Features
 
             var featureInterfaceType = typeof(IFeature);
             var featureList = new List<IFeature>(dlls.Length);
-            featureList.AddRange(dlls.Select(dll => LoadFeatureFromAssembly(baseDir, dll, featureInterfaceType)).Where(feature => feature != null));
+            var loadedFeatures = dlls
+                .Select(dll => LoadFeatureFromAssembly(Path.Combine(baseDir, string.Concat(featurePrefix, dll, ".dll")), featureInterfaceType))
+                .Where(feature => feature != null);
+            featureList.AddRange(loadedFeatures);
             return featureList;
         }
 
-        static IFeature LoadFeatureFromAssembly(string baseDir, string dll, Type featureInterfaceType)
+        static IFeature LoadFeatureFromAssembly(string assemblyPath, Type featureInterfaceType)
         {
-            var dllPath = Path.Combine(baseDir, dll + ".dll");
-            var loadContext = new FeatureAssemblyLoadContext(dllPath);
+            var loadContext = new FeatureAssemblyLoadContext(assemblyPath);
             try
             {
-                var featureAssembly = loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(dllPath)));
-                var featureType = featureAssembly.GetExportedTypes()
-                    .FirstOrDefault(t => t.IsPublic && featureInterfaceType.IsAssignableFrom(t));
+                var featureAssembly = loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(assemblyPath)));
+                var exportedTypes = featureAssembly.GetExportedTypes();
+                var featureType = exportedTypes.FirstOrDefault(t => t.IsPublic && featureInterfaceType.IsAssignableFrom(t));
 
                 if (featureType != null)
                 {
@@ -64,11 +66,16 @@ namespace SharpCR.Registry.Features
                         Console.WriteLine(ex);
                     }
                 }
+                else
+                {
+                    // todo print to logger
+                    Console.WriteLine($"No class implemented IFeature in assembly {assemblyPath}. Ignoring the assembly.");
+                }
             }
             catch (Exception ex)
             {
                 // todo print to logger
-                Console.WriteLine($"Error loading feature assembly {dllPath} with error:");
+                Console.WriteLine($"Error loading feature assembly {assemblyPath} with error:");
                 Console.WriteLine(ex);
             }
 
