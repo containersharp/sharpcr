@@ -1,30 +1,44 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SharpCR.Registry.Features;
 
 namespace SharpCR.Registry
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
+        private readonly IReadOnlyList<IFeature> _loadedFeatures;
+        private readonly StartupContext _context;
 
-        public IConfiguration Configuration { get; }
+        public Startup(IConfiguration configuration, 
+            IWebHostEnvironment webHostEnvironment,
+            IHostEnvironment hostEnvironment)
+        {
+            _context = new StartupContext
+            {
+                Configuration = configuration,
+                WebHostEnvironment = webHostEnvironment,
+                HostEnvironment = hostEnvironment
+            };
+            
+            _loadedFeatures = FeatureLoader.LoadFeatures(configuration);
+        }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            _loadedFeatures.ForEach(feature => feature.ConfigureServices(services, _context));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IServiceProvider services)
         {
-            if (env.IsDevelopment())
+            if (_context.WebHostEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -36,7 +50,7 @@ namespace SharpCR.Registry
             {
                 endpoints.MapControllers();
             });
-            
+            _loadedFeatures.ForEach(feature => feature.ConfigureWebAppPipeline(app, services,  _context));
         }
     }
 }
