@@ -17,13 +17,11 @@ namespace SharpCR.Registry.Controllers
         // todo: add logging
         // todo: handling errors
         private readonly IRecordStore _recordStore;
-        private readonly IBlobStorage _blobStorage;
         private readonly Lazy<Dictionary<string, IManifestParser>> _manifestParsers;
 
-        public ManifestController(IRecordStore recordStore, IBlobStorage blobStorage)
+        public ManifestController(IRecordStore recordStore)
         {
             _recordStore = recordStore;
-            _blobStorage = blobStorage;
             _manifestParsers = new Lazy<Dictionary<string, IManifestParser>>(InitializeManifestParsers);
         }
 
@@ -39,7 +37,7 @@ namespace SharpCR.Registry.Controllers
             }
 
             HttpContext.Response.Headers.Add("Docker-Content-Digest", artifact.DigestString);
-            
+
             var manifestBytes = artifact.ManifestBytes;
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
             if (writeFile)
@@ -55,7 +53,7 @@ namespace SharpCR.Registry.Controllers
         [RegistryRoute("manifests/{reference}")]
         [HttpPut]
         public IActionResult Save(string repo, string reference)
-        {   
+        {
             string queriedTag = null;
             string queriedDigest = null;
             if (Digest.TryParse(reference, out _))
@@ -66,14 +64,14 @@ namespace SharpCR.Registry.Controllers
             {
                 queriedTag = reference;
             }
-            
+
             var mediaType = Request.Headers["Content-Type"];
             if (!_manifestParsers.Value.TryGetValue(mediaType.ToString(), out var acceptableParser))
             {
                 // unsupported media type
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
-            
+
             using var memoryStream = new MemoryStream();
             Request.Body.CopyTo(memoryStream);
             var manifestBytes = memoryStream.ToArray();
@@ -91,10 +89,10 @@ namespace SharpCR.Registry.Controllers
                 // some of the referenced item does not exist
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
-            
+
             var existingArtifact = queriedTag != null ?  _recordStore.GetArtifactByTag(repo, queriedTag) : null;
             if (existingArtifact == null)
-            {   
+            {
                 var artifact = new ArtifactRecord
                 {
                     RepositoryName = repo,
@@ -113,7 +111,7 @@ namespace SharpCR.Registry.Controllers
                 _recordStore.UpdateArtifact(existingArtifact);
                 // todo: cleanup replaced blobs...
             }
-            
+
             HttpContext.Response.Headers.Add("Location", $"/v2/{repo}/manifests/{reference}");
             HttpContext.Response.Headers.Add("Docker-Content-Digest", pushedDigest);
             return new StatusCodeResult((int) HttpStatusCode.Created);
@@ -155,13 +153,13 @@ namespace SharpCR.Registry.Controllers
                 return (null != _recordStore.GetArtifactByDigest(repoName, referencedItem.Digest));
             }
 
-            return _blobStorage.BlobExists(referencedItem);
+            return _recordStore.BlobExists(referencedItem);
         }
 
         private ArtifactRecord GetArtifactByReference(string reference, string repoName)
         {
-            return Digest.TryParse(reference, out _) 
-                ? _recordStore.GetArtifactByDigest(repoName, reference) 
+            return Digest.TryParse(reference, out _)
+                ? _recordStore.GetArtifactByDigest(repoName, reference)
                 : _recordStore.GetArtifactByTag(repoName, reference);
         }
     }

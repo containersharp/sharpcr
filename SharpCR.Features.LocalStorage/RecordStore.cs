@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using SharpCR.Registry;
+using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Features.LocalStorage
@@ -41,7 +42,7 @@ namespace SharpCR.Features.LocalStorage
                 _locker.ReleaseReaderLock();
             }
         }
-        
+
         void WriteResource(Action writeOperation)
         {
             try
@@ -54,7 +55,7 @@ namespace SharpCR.Features.LocalStorage
                 _locker.ReleaseWriterLock();
             }
         }
-        
+
         public IQueryable<ArtifactRecord> ListArtifact(string repoName)
         {
             return ReadResource(() => _allRecords.AsQueryable());
@@ -64,8 +65,8 @@ namespace SharpCR.Features.LocalStorage
         {
             return ReadResource(() =>
             {
-                return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts) 
-                        ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase)) 
+                return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
+                        ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
                         : null;
             });
         }
@@ -117,6 +118,21 @@ namespace SharpCR.Features.LocalStorage
             });
         }
 
+        public bool BlobExists(Descriptor descriptor)
+        {
+            throw new NotImplementedException();
+        }
+
+        public BlobRecord GetBlobByDigest(string repoName, string digest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteBlob(BlobRecord blobRecord)
+        {
+            throw new NotImplementedException();
+        }
+
 
         private void ReadFromFile()
         {
@@ -126,13 +142,13 @@ namespace SharpCR.Features.LocalStorage
                 _allRecords = new HashSet<ArtifactRecord>();
                 return;
             }
-            
+
             using var fs = File.OpenRead(dataFile);
             var bytes = File.ReadAllBytes(dataFile);
             var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             _allRecords = storedObject.Artifacts.ToHashSet();
         }
-        
+
         private void ArtifactsUpdated()
         {
             _allRecordsByRepo = _allRecords
@@ -148,7 +164,7 @@ namespace SharpCR.Features.LocalStorage
                     {
                         Artifacts = _allRecords.ToArray()
                     };
-                    
+
                     var dataFile = Path.Combine(_config.BasePath, _config.FileName);
                     using var fs = File.OpenWrite(dataFile);
                     using var utf8JsonWriter = new Utf8JsonWriter(fs);
@@ -161,6 +177,6 @@ namespace SharpCR.Features.LocalStorage
     public class DataObjects
     {
         public ArtifactRecord[] Artifacts { get; set; }
-        
+
     }
 }

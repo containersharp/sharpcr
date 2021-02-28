@@ -1,10 +1,11 @@
-using SharpCR.Registry.Models;
-using SharpCR.Registry.Models.Manifests;
-
 namespace SharpCR.Registry
 {
     public interface IBlobStorage
     {
-        bool BlobExists(Descriptor descriptor);
+        byte[] GetByDigest(string repoName, string digest);
+
+        void DeleteByDigest(string repoName, string digest);
+
+        void Save(string repoName, string digest, byte[] content);
     }
 }
