@@ -39,10 +39,11 @@ namespace SharpCR.Registry.Controllers
                 var content = _blobStorage.Read(blob.StorageLocation);
                 return new FileStreamResult(content, "application/octet-stream");
             }
-
-            var downloadableUrl = _blobStorage.GenerateDownloadUrl(blob.StorageLocation);
-            HttpContext.Response.Headers.Add("Location", downloadableUrl);
-            return new EmptyResult();
+            else
+            {
+                var downloadableUrl = _blobStorage.GenerateDownloadUrl(blob.StorageLocation);
+                return new RedirectResult(downloadableUrl);
+            }
         }
 
         [RegistryRoute("blobs/uploads")]
