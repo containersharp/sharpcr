@@ -32,8 +32,8 @@ namespace SharpCR.Registry.Controllers
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
             if (writeFile)
             {
-                var content = _blobStorage.GetByDigest(repo, digest);
-                return new FileContentResult(content, "application/octet-stream");
+                var content = _blobStorage.GetByDigest(blob.Url);
+                return new FileStreamResult(content, "application/octet-stream");
             }
 
             return new EmptyResult();
@@ -65,7 +65,7 @@ namespace SharpCR.Registry.Controllers
             }
 
             _recordStore.DeleteBlob(blob);
-            _blobStorage.DeleteByDigest(repo, digest);
+            _blobStorage.DeleteByDigest(blob.Url);
 
             return new StatusCodeResult((int) HttpStatusCode.Accepted);
         }

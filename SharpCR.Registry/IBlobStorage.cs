@@ -1,11 +1,13 @@
+using System.IO;
+
 namespace SharpCR.Registry
 {
     public interface IBlobStorage
     {
-        byte[] GetByDigest(string repoName, string digest);
+        Stream GetByDigest(string url);
 
-        void DeleteByDigest(string repoName, string digest);
+        void DeleteByDigest(string url);
 
-        void Save(string repoName, string digest, byte[] content);
+        string Save(string repoName, string digest, Stream stream);
     }
 }

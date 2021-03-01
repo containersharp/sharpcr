@@ -118,11 +118,6 @@ namespace SharpCR.Features.LocalStorage
             });
         }
 
-        public bool BlobExists(Descriptor descriptor)
-        {
-            throw new NotImplementedException();
-        }
-
         public BlobRecord GetBlobByDigest(string repoName, string digest)
         {
             throw new NotImplementedException();

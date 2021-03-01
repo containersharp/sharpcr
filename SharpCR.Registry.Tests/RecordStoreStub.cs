@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry.Tests
@@ -63,11 +62,6 @@ namespace SharpCR.Registry.Tests
         public void CreateArtifact(ArtifactRecord artifactRecord)
         {
             _artifacts.Add(artifactRecord);
-        }
-
-        public bool BlobExists(Descriptor descriptor)
-        {
-            return true;
         }
 
         public BlobRecord GetBlobByDigest(string repoName, string digest)

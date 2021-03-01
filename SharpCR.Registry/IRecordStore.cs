@@ -1,5 +1,4 @@
 using System.Linq;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry
@@ -15,8 +14,6 @@ namespace SharpCR.Registry
         void DeleteArtifact(ArtifactRecord artifactRecord);
         void UpdateArtifact(ArtifactRecord artifactRecord);
         void CreateArtifact(ArtifactRecord artifactRecord);
-
-        bool BlobExists(Descriptor descriptor);
 
         BlobRecord GetBlobByDigest(string repoName, string digest);
 

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -14,23 +15,26 @@ namespace SharpCR.Registry.Tests.ControllerTests
         {
             var repositoryName = "foo/abcd";
             var digest = "digest";
-            var blobBytes = Encoding.Default.GetBytes("blob binary");
 
-            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobBytes.Length};
-            var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
-
+            var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            blobStorage.Save(repositoryName, digest, blobBytes);
+            var blobUrl = blobStorage.Save(repositoryName, digest, blobStream);
+
+            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Url = blobUrl};
+            var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
             var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
-            var response = controller.Get(repositoryName, digest) as FileContentResult;
+            var response = controller.Get(repositoryName, digest) as FileStreamResult;
+            var responseStream = new MemoryStream();
+
+            response?.FileStream.CopyTo(responseStream);
 
             Assert.NotNull(response);
-            Assert.Equal(blobBytes.Length, response.FileContents.Length);
+            Assert.Equal(blobStream.Length, response.FileStream.Length);
             Assert.Equal("application/octet-stream", response.ContentType);
-            Assert.True(blobBytes.SequenceEqual(response.FileContents));
+            Assert.True(blobStream.ToArray().SequenceEqual(responseStream.ToArray()));
         }
 
         [Fact]
@@ -38,13 +42,13 @@ namespace SharpCR.Registry.Tests.ControllerTests
         {
             var repositoryName = "foo/abcd";
             var digest = "digest";
-            var blobBytes = Encoding.Default.GetBytes("blob binary");
 
-            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobBytes.Length};
-            var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
-
+            var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            blobStorage.Save(repositoryName, digest, blobBytes);
+            var blobUrl = blobStorage.Save(repositoryName, digest, blobStream);
+
+            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Url = blobUrl};
+            var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
             var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
             var response = controller.Delete(repositoryName, digest) as StatusCodeResult;
@@ -52,7 +56,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.NotNull(response);
             Assert.Equal(202, response.StatusCode);
             Assert.Null(dataStore.GetBlobByDigest(repositoryName, digest));
-            Assert.Null(blobStorage.GetByDigest(repositoryName, digest));
+            Assert.Null(blobStorage.GetByDigest(blobUrl));
         }
     }
 }

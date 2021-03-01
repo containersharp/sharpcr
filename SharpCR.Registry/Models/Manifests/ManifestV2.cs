@@ -19,20 +19,20 @@ namespace SharpCR.Registry.Models.Manifests
         {
             RawJsonBytes = rawBytes;
         }
-        
+
         public ManifestV2()
         {
         }
-        
+
         public Descriptor Config { get; set; }
-        
+
         public override Descriptor[] GetReferencedDescriptors()
         {
-            return Config == null 
-                ? Layers 
+            return Config == null
+                ? Layers
                 : Layers.Concat(new[] {Config}).ToArray();
         }
-        
+
         public class Parser : IManifestParser
         {
             public Manifest Parse(byte[] jsonBytes)
@@ -43,7 +43,7 @@ namespace SharpCR.Registry.Models.Manifests
                     throw new NotSupportedException(
                         "Only single version 2 schema version manifest is supported by this parser.");
                 }
-                
+
                 // Tag could be included in annotation `org.opencontainers.image.ref.name`
                 // https://github.com/opencontainers/image-spec/blob/master/image-layout.md
                 manifest.RawJsonBytes = jsonBytes;

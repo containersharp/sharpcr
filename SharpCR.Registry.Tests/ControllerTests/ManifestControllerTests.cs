@@ -1,8 +1,10 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers;
+using SharpCR.Registry.Models.Manifests;
 using SharpCR.Registry.Records;
 using Xunit;
 
@@ -55,16 +57,16 @@ namespace SharpCR.Registry.Tests.ControllerTests
         [Fact]
         public void PutManifest_V2_Schema()
         {
-            var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
-            var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
-            var dataStore = new RecordStoreStub();
-            var controller = new ManifestController(dataStore).SetupHttpContext();
-            var request = controller.Request;
-            request.Headers.Add("Content-Type", manifestType);
-            request.Body = new MemoryStream(manifestBytes);
-
             const string repositoryName = "foo/abcd";
             const string tag = "v1.0.0";
+            var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
+            var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
+            var dataStore = new RecordStoreStub().WithBlobs(BuildBlobRecords(repositoryName, manifestBytes));
+
+            var controller = new ManifestController(dataStore).SetupHttpContext();
+            controller.Request.Headers.Add("Content-Type", manifestType);
+            controller.Request.Body = new MemoryStream(manifestBytes);
+
             var putResponse = controller.Save(repositoryName, tag);
             var statusCodeResult = putResponse as StatusCodeResult;
             var storedArtifact = dataStore.GetArtifactByTag(repositoryName, tag);
@@ -77,7 +79,6 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.Equal(manifestType, storedArtifact.ManifestMediaType);
         }
 
-
         // todo: assert orphan blobs are deleted when deleting manifest while referenced blobs are kept.
         // todo: test more put cases
 
@@ -87,6 +88,21 @@ namespace SharpCR.Registry.Tests.ControllerTests
                 $"SharpCR.Registry.Tests.ControllerTests.{name}");
             using var sr = new StreamReader(stream!);
             return sr.ReadToEnd();
+        }
+
+        private BlobRecord[] BuildBlobRecords(string repositoryName, byte[] manifestBytes)
+        {
+            var manifest = new ManifestV2.Parser().Parse(manifestBytes);
+            var references = manifest.GetReferencedDescriptors();
+
+            return references.Select(
+                e => new BlobRecord
+                {
+                    RepositoryName = repositoryName,
+                    DigestString = e.Digest,
+                    ContentLength = e.Size ?? 0,
+                    Url = ""
+                }).ToArray();
         }
     }
 }
