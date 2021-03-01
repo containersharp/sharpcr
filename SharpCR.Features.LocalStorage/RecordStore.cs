@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using SharpCR.Registry;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Features.LocalStorage

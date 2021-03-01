@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -7,34 +8,28 @@ namespace SharpCR.Registry.Tests
     {
         private readonly Dictionary<string, Stream> _blobs = new Dictionary<string, Stream>();
 
-        public Stream GetByDigest(string url)
+        public Stream Get(string location)
         {
-            if (_blobs.ContainsKey(url))
+            if (_blobs.ContainsKey(location))
             {
-                return _blobs[url];
+                return _blobs[location];
             }
 
             return null;
         }
 
-        public void DeleteByDigest(string url)
+        public void Delete(string location)
         {
-            _blobs.Remove(url);
+            _blobs.Remove(location);
         }
 
-        public string Save(string repoName, string digest, Stream stream)
+        public string Save(Stream stream)
         {
-            var key = getKey(repoName, digest);
+            var location = Guid.NewGuid().ToString();
 
-            _blobs.Add(key, stream);
+            _blobs.Add(location, stream);
 
-            return key;
+            return location;
         }
-
-        private string getKey(string repoName, string digest)
-        {
-            return digest + "@" + digest;
-        }
-
     }
 }

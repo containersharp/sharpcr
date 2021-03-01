@@ -18,9 +18,9 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            var blobUrl = blobStorage.Save(repositoryName, digest, blobStream);
+            var blobLocation = blobStorage.Save(blobStream);
 
-            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Url = blobUrl};
+            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Location = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
             var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
@@ -45,9 +45,9 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            var blobUrl = blobStorage.Save(repositoryName, digest, blobStream);
+            var blobLocation = blobStorage.Save(blobStream);
 
-            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Url = blobUrl};
+            var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, Location = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
             var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
@@ -56,7 +56,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.NotNull(response);
             Assert.Equal(202, response.StatusCode);
             Assert.Null(dataStore.GetBlobByDigest(repositoryName, digest));
-            Assert.Null(blobStorage.GetByDigest(blobUrl));
+            Assert.Null(blobStorage.Get(blobLocation));
         }
     }
 }

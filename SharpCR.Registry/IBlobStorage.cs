@@ -4,10 +4,10 @@ namespace SharpCR.Registry
 {
     public interface IBlobStorage
     {
-        Stream GetByDigest(string url);
+        Stream Get(string location);
 
-        void DeleteByDigest(string url);
+        void Delete(string location);
 
-        string Save(string repoName, string digest, Stream stream);
+        string Save(Stream stream);
     }
 }
