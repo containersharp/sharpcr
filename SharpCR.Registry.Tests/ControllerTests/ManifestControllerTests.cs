@@ -101,7 +101,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
                     RepositoryName = repositoryName,
                     DigestString = e.Digest,
                     ContentLength = e.Size ?? 0,
-                    Location = ""
+                    StorageLocation = ""
                 }).ToArray();
         }
     }

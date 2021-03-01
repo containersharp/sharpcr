@@ -153,7 +153,7 @@ namespace SharpCR.Registry.Controllers
                 return (null != _recordStore.GetArtifactByDigest(repoName, referencedItem.Digest));
             }
 
-            return _recordStore.GetBlobByDigest(repoName, referencedItem.Digest) != null;
+            return (null != _recordStore.GetBlobByDigest(repoName, referencedItem.Digest));
         }
 
         private ArtifactRecord GetArtifactByReference(string reference, string repoName)

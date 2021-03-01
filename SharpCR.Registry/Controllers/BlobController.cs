@@ -28,14 +28,20 @@ namespace SharpCR.Registry.Controllers
 
             HttpContext.Response.Headers.Add("Docker-Content-Digest", blob.DigestString);
             HttpContext.Response.Headers.Add("Content-Length", blob.ContentLength.ToString());
-
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
-            if (writeFile)
+            if (!writeFile)
             {
-                var content = _blobStorage.Get(blob.Location);
+                return new EmptyResult();
+            }
+            
+            if (!_blobStorage.SupportsDownloading)
+            {
+                var content = _blobStorage.Read(blob.StorageLocation);
                 return new FileStreamResult(content, "application/octet-stream");
             }
 
+            var downloadableUrl = _blobStorage.GenerateDownloadUrl(blob.StorageLocation);
+            HttpContext.Response.Headers.Add("Location", downloadableUrl);
             return new EmptyResult();
         }
 
@@ -65,7 +71,7 @@ namespace SharpCR.Registry.Controllers
             }
 
             _recordStore.DeleteBlob(blob);
-            _blobStorage.Delete(blob.Location);
+            _blobStorage.Delete(blob.StorageLocation);
 
             return new StatusCodeResult((int) HttpStatusCode.Accepted);
         }

@@ -6,16 +6,12 @@ namespace SharpCR.Registry.Tests
 {
     public class BlobStorageStub : IBlobStorage
     {
-        private readonly Dictionary<string, Stream> _blobs = new Dictionary<string, Stream>();
+        private readonly Dictionary<string, byte[]> _blobs = new Dictionary<string, byte[]>();
 
-        public Stream Get(string location)
+
+        public Stream Read(string location)
         {
-            if (_blobs.ContainsKey(location))
-            {
-                return _blobs[location];
-            }
-
-            return null;
+            return _blobs.ContainsKey(location) ? new MemoryStream(_blobs[location]) : null;
         }
 
         public void Delete(string location)
@@ -23,13 +19,22 @@ namespace SharpCR.Registry.Tests
             _blobs.Remove(location);
         }
 
-        public string Save(Stream stream)
+
+        public bool SupportsDownloading { get; } = false;
+
+        public string GenerateDownloadUrl(string location)
         {
-            var location = Guid.NewGuid().ToString();
+            throw new System.NotImplementedException();
+        }
 
-            _blobs.Add(location, stream);
-
-            return location;
+        public string Save(string repoName, string digest, Stream stream)
+        {
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            
+            var key = Guid.NewGuid().ToString();
+            _blobs.Add(key, ms.ToArray());
+            return key;
         }
     }
 }
