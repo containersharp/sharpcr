@@ -6,7 +6,8 @@ namespace SharpCR.Features.LocalStorage
 {
     public class LocalStorageConfiguration
     {
-        public string BasePath { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
-        public string FileName { get; set; } = "registry.json";
+        public string BasePath { get; set; } 
+        public string RecordsFileName { get; set; } = "records.json";
+        public string BlobsDirectoryName { get; set; } = "blobs";
     }
 }

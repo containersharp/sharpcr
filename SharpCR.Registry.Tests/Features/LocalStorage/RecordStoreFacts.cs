@@ -13,13 +13,13 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         [Fact]
         public void ShouldStore()
         {
-            var tempPath = Path.GetTempPath();
-            var storePath = Path.Combine(tempPath, "registry.json");
-            if (File.Exists(storePath))
+            var basePath = Path.GetTempPath();
+            var recordsFile = Path.Combine(basePath, "records.json");
+            if (File.Exists(recordsFile))
             {
-                File.Delete(storePath);
+                File.Delete(recordsFile);
             }
-            var store = CreateRecordStore(tempPath);
+            var store = CreateRecordStore(basePath);
 
             var artifact = new ArtifactRecord()
             {
@@ -30,8 +30,8 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             store.CreateArtifact(artifact);
             
             Thread.Sleep(TimeSpan.FromMilliseconds(100));
-            Assert.True(File.Exists(storePath));
-            Assert.True(new FileInfo(storePath).Length > 0);
+            Assert.True(File.Exists(recordsFile));
+            Assert.True(new FileInfo(recordsFile).Length > 0);
         }
         
         [Fact]
@@ -53,10 +53,10 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             Assert.NotNull(storedItem);
         }
 
-        private static RecordStore CreateRecordStore(string path)
+        private static DiskRecordStore CreateRecordStore(string path)
         {
             var context = FeatureEntryFacts.CreateTestSetupContext();
-            return new RecordStore(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = path}));
+            return new DiskRecordStore(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = path}));
         }
     }
 }

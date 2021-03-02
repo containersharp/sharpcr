@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -36,8 +37,9 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var featureObject = CreateFeatureInstance(_featureType);
             featureObject.ConfigureServices(services, CreateTestSetupContext());
             
-            Assert.NotEmpty(services);
             Assert.NotNull(featureObject);
+            Assert.NotNull(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskRecordStore)));
+            Assert.NotNull(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskBlobStorage)));
         }
         
         

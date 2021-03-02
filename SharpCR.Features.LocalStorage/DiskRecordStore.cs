@@ -12,7 +12,7 @@ using SharpCR.Registry.Records;
 
 namespace SharpCR.Features.LocalStorage
 {
-    public class RecordStore: IRecordStore
+    public class DiskRecordStore: IRecordStore
     {
         private readonly LocalStorageConfiguration _config;
         private HashSet<ArtifactRecord> _allRecords;
@@ -20,12 +20,11 @@ namespace SharpCR.Features.LocalStorage
         private readonly ReaderWriterLock _locker = new ReaderWriterLock();
         private static readonly TimeSpan LockerTimeout = TimeSpan.FromMilliseconds(50);
 
-        public RecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> config)
+        public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
-            _config = config.Value ?? new LocalStorageConfiguration()
-            {
-                BasePath = environment.WebRootPath
-            };
+            _config = configuredOptions.Value ?? new LocalStorageConfiguration();
+            _config.BasePath ??= environment.WebRootPath;
+            
             ReadFromFile();
         }
 
@@ -130,7 +129,7 @@ namespace SharpCR.Features.LocalStorage
 
         private void ReadFromFile()
         {
-            var  dataFile = Path.Combine(_config.BasePath, _config.FileName);
+            var  dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
             if (!File.Exists(dataFile))
             {
                 _allRecords = new HashSet<ArtifactRecord>();
@@ -159,7 +158,7 @@ namespace SharpCR.Features.LocalStorage
                         Artifacts = _allRecords.ToArray()
                     };
 
-                    var dataFile = Path.Combine(_config.BasePath, _config.FileName);
+                    var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
                     using var fs = File.OpenWrite(dataFile);
                     using var utf8JsonWriter = new Utf8JsonWriter(fs);
                     JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
