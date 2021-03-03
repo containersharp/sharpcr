@@ -61,12 +61,10 @@ namespace SharpCR.Registry.Controllers
         {
             var sessionId = $"{_settings.BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
             var singlePost = !string.IsNullOrEmpty(digest);
-            if (!singlePost)
-            {
-                return Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
-            }
             
-            return UploadWithDigest(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)));
+            return singlePost
+                ? FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId))) : 
+                Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
         }
 
         [RegistryRoute("blobs/uploads/{sessionId}")]
@@ -74,6 +72,12 @@ namespace SharpCR.Registry.Controllers
         [HttpPut]
         public IActionResult ContinueUpload(string repo, string sessionId, [FromQuery] string digest)
         {
+            var sessionIdPrefix = sessionId.Split("_");
+            if (sessionIdPrefix.Length != 2 || !string.Equals(sessionIdPrefix[1], _settings.BlobUploadSessionIdPrefix))
+            {
+                return BadRequest();
+            }
+            
             var blobTempFile = new FileInfo(TempPathForUploadingBlob(sessionId));
             var receivingChunks = string.Equals(Request.Method, HttpMethod.Patch.ToString(), StringComparison.OrdinalIgnoreCase);
 
@@ -84,7 +88,7 @@ namespace SharpCR.Registry.Controllers
                     : Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
             }
 
-            return UploadWithDigest(repo, digest, blobTempFile);
+            return FinishUploading(repo, digest, blobTempFile);
         }
 
         [RegistryRoute("blobs/{digest}")]
@@ -104,7 +108,7 @@ namespace SharpCR.Registry.Controllers
         }
         
         
-        private IActionResult UploadWithDigest(string repo, string digest, FileInfo blobTempFile)
+        private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile)
         {
             if (!SaveChunk(blobTempFile, out var exceptionalResult))
             {
