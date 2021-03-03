@@ -126,6 +126,11 @@ namespace SharpCR.Features.LocalStorage
             throw new NotImplementedException();
         }
 
+        public void CreateBlob(BlobRecord blobRecord)
+        {
+            throw new NotImplementedException();
+        }
+
 
         private void ReadFromFile()
         {

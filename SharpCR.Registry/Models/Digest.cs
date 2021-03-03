@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace SharpCR.Registry.Models
@@ -46,10 +48,33 @@ namespace SharpCR.Registry.Models
 
     public static Digest Compute(byte[] bytes, HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256)
     {
+      using var ms = new MemoryStream(bytes);
+      return Compute(ms, hashAlgorithm);
+    }
+    
+    public static Digest Compute(Stream inputStream, HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256)
+    {
       var algName = hashAlgorithm.ToString();
       using var algorithm = System.Security.Cryptography.HashAlgorithm.Create(algName);
-      return new Digest(algName.ToLower(), algorithm!.ComputeHash(bytes));
+      return new Digest(algName.ToLower(), algorithm!.ComputeHash(inputStream));
     }
+
+    public override bool Equals(object obj)
+    {
+      if (!(obj is Digest otherDigest))
+      {
+        return false;
+      }
+
+      return string.Equals(this.Algorithm, otherDigest.Algorithm, StringComparison.OrdinalIgnoreCase) 
+             && this._hashBytes.SequenceEqual(otherDigest._hashBytes);
+    }
+
+    public override int GetHashCode()
+    {
+      return BitConverter.ToInt32(this._hashBytes, 0);
+    }
+    
     
 
     public enum HashAlgorithm

@@ -18,5 +18,7 @@ namespace SharpCR.Registry
         BlobRecord GetBlobByDigest(string repoName, string digest);
 
         void DeleteBlob(BlobRecord blobRecord);
+        
+        void CreateBlob(BlobRecord blobRecord);
     }
 }

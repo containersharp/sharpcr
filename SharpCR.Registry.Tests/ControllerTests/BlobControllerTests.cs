@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using SharpCR.Registry.Controllers;
 using SharpCR.Registry.Records;
 using Xunit;
@@ -23,7 +24,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, StorageLocation = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
-            var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
+            var controller = new BlobController(dataStore, blobStorage,null, null).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
             var response = controller.Get(repositoryName, digest) as FileStreamResult;
@@ -50,7 +51,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, StorageLocation = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
-            var controller = new BlobController(dataStore, blobStorage).SetupHttpContext();
+            var controller = new BlobController(dataStore, blobStorage, null, null).SetupHttpContext();
             var response = controller.Delete(repositoryName, digest) as StatusCodeResult;
 
             Assert.NotNull(response);

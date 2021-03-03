@@ -79,5 +79,10 @@ namespace SharpCR.Registry.Tests
                 _blobs.RemoveAt(index);
             }
         }
+
+        public void CreateBlob(BlobRecord blobRecord)
+        {
+            _blobs.Add(blobRecord);
+        }
     }
 }
