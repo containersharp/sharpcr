@@ -365,3 +365,6 @@ FodyWeavers.xsd
 
 .DS_Store
 .idea/
+
+SharpCR.Registry/blobs/
+SharpCR.Registry/uploading-blobs/

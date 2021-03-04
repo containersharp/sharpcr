@@ -14,7 +14,11 @@ namespace SharpCR.Registry
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseStartup<Startup>()
+                        .UseKestrel(op =>
+                        {
+                            op.AllowSynchronousIO = true;
+                        });
                 });
     }
 }

@@ -21,7 +21,8 @@ namespace SharpCR.Registry.Controllers
         {
             _recordStore = recordStore;
             _blobStorage = blobStorage;
-            _settings = settings.Value ?? new Settings {TemporaryFilesRootPath = environment.ContentRootPath };
+            _settings = settings.Value;
+            _settings.TemporaryFilesRootPath ??= environment.ContentRootPath;
         }
 
         [RegistryRoute("blobs/{digest}")]
@@ -61,9 +62,10 @@ namespace SharpCR.Registry.Controllers
         {
             var sessionId = $"{_settings.BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
             var singlePost = !string.IsNullOrEmpty(digest);
+            var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
             
             return singlePost
-                ? FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId))) : 
+                ? FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)), chunkedEncoding) : 
                 Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
         }
 
@@ -72,23 +74,24 @@ namespace SharpCR.Registry.Controllers
         [HttpPut]
         public IActionResult ContinueUpload(string repo, string sessionId, [FromQuery] string digest)
         {
-            var sessionIdPrefix = sessionId.Split("_");
-            if (sessionIdPrefix.Length != 2 || !string.Equals(sessionIdPrefix[1], _settings.BlobUploadSessionIdPrefix))
+            var sessionIdPrefix = sessionId.Split("_", StringSplitOptions.RemoveEmptyEntries);
+            if (sessionIdPrefix.Length != 2 || !string.Equals(sessionIdPrefix[0], _settings.BlobUploadSessionIdPrefix))
             {
                 return BadRequest();
             }
             
             var blobTempFile = new FileInfo(TempPathForUploadingBlob(sessionId));
             var receivingChunks = string.Equals(Request.Method, HttpMethod.Patch.ToString(), StringComparison.OrdinalIgnoreCase);
+            var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
 
-            if (receivingChunks)
+            if (!chunkedEncoding && receivingChunks)
             {
-                return !SaveChunk(blobTempFile, out var exceptionalResult) 
+                return !SaveChunk(blobTempFile, false, out var exceptionalResult) 
                     ? exceptionalResult 
                     : Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
             }
 
-            return FinishUploading(repo, digest, blobTempFile);
+            return FinishUploading(repo, digest, blobTempFile, chunkedEncoding);
         }
 
         [RegistryRoute("blobs/{digest}")]
@@ -108,14 +111,16 @@ namespace SharpCR.Registry.Controllers
         }
         
         
-        private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile)
+        private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding)
         {
-            if (!SaveChunk(blobTempFile, out var exceptionalResult))
+            if (!SaveChunk(blobTempFile, chunkedEncoding, out var exceptionalResult))
             {
                 return exceptionalResult;
             }
 
-            if (!Digest.TryParse(digest, out var requestedDigest) || !blobTempFile.Exists)
+            Digest requestedDigest = null;
+            if (!System.IO.File.Exists(blobTempFile.FullName) 
+                || (!string.IsNullOrEmpty(digest) && !Digest.TryParse(digest, out requestedDigest)))
             {
                 // If we are closing the upload and we can't find the stored temporary file, there must be something wrong.
                 return BadRequest();
@@ -123,7 +128,7 @@ namespace SharpCR.Registry.Controllers
             
             using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
             var computedDigest = Digest.Compute(fileReceived);
-            if (!requestedDigest.Equals(computedDigest))
+            if (requestedDigest != null && !requestedDigest.Equals(computedDigest))
             {
                 blobTempFile.Delete();
                 return BadRequest();
@@ -145,23 +150,34 @@ namespace SharpCR.Registry.Controllers
             return Created($"/v2/{repo}/blobs/{digestString}", null);
         }
 
-        private bool SaveChunk(FileInfo tempFile, out IActionResult actionResult)
+        private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, out IActionResult actionResult)
         {
             actionResult = null;
             var requestContentLength = Request.Headers.ContentLength;
-            var hasChunk = requestContentLength > 0;
-            if (!hasChunk) return true;
+            if (!chunkedEncoding)
+            {
+                if (!requestContentLength.HasValue || requestContentLength <= 0)
+                {
+                    actionResult = BadRequest();
+                    return false;
+                }
+            }
             
+
             var existingLength = tempFile.Exists ? tempFile.Length : 0;
-            if (!ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out actionResult))
+            if (!chunkedEncoding && !ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out actionResult))
             {
                 return false;
             }
-                
+
+            if (!tempFile.Directory!.Exists)
+            {
+                tempFile.Directory.Create();
+            }
             using var receivedStream = tempFile.Exists ? tempFile.OpenWrite() : tempFile.Create();
             Request.Body.CopyTo(receivedStream);
 
-            if (requestContentLength != (new FileInfo(tempFile.FullName).Length - existingLength))
+            if (!chunkedEncoding && requestContentLength != (new FileInfo(tempFile.FullName).Length - existingLength))
             {
                 receivedStream.Dispose();
                 tempFile.Delete();

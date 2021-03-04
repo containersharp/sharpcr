@@ -11,8 +11,8 @@ namespace SharpCR.Features.LocalStorage
 
         public DiskBlobStorage(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
-            var config = configuredOptions.Value ?? new LocalStorageConfiguration();
-            var contentRoot = config.BasePath ?? environment.WebRootPath;
+            var config = configuredOptions.Value;
+            var contentRoot = config.BasePath ?? environment.ContentRootPath;
             _storageBasePath = Path.Combine(contentRoot, config.BlobsDirectoryName);
         }
         

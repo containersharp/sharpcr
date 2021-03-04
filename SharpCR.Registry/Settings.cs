@@ -4,6 +4,6 @@
     {
         public string TemporaryFilesRootPath { get; set; } 
 
-        public string BlobUploadSessionIdPrefix { get; set; } = "local_";
+        public string BlobUploadSessionIdPrefix { get; set; } = "local";
     }
 }
