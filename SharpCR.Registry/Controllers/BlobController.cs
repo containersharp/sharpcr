@@ -118,9 +118,10 @@ namespace SharpCR.Registry.Controllers
                 return exceptionalResult;
             }
 
+            // refresh disk status
+            blobTempFile = new FileInfo(blobTempFile.FullName);
             Digest requestedDigest = null;
-            if (!System.IO.File.Exists(blobTempFile.FullName) 
-                || (!string.IsNullOrEmpty(digest) && !Digest.TryParse(digest, out requestedDigest)))
+            if (!blobTempFile.Exists || (!string.IsNullOrEmpty(digest) && !Digest.TryParse(digest, out requestedDigest)))
             {
                 // If we are closing the upload and we can't find the stored temporary file, there must be something wrong.
                 return BadRequest();

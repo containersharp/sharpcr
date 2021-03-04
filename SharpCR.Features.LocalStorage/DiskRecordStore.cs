@@ -24,6 +24,7 @@ namespace SharpCR.Features.LocalStorage
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
+            _config = configuredOptions.Value;
             _config.BasePath ??= environment.ContentRootPath;
             
             ReadFromFile();

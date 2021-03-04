@@ -368,3 +368,4 @@ FodyWeavers.xsd
 
 SharpCR.Registry/blobs/
 SharpCR.Registry/uploading-blobs/
+SharpCR.Registry/records.json
