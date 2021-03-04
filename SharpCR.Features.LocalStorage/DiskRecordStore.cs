@@ -15,8 +15,10 @@ namespace SharpCR.Features.LocalStorage
     public class DiskRecordStore: IRecordStore
     {
         private readonly LocalStorageConfiguration _config;
-        private HashSet<ArtifactRecord> _allRecords;
+        private HashSet<ArtifactRecord> _allArtifacts;
+        private HashSet<BlobRecord> _allBlobs;
         private Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
+        private Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
         private readonly ReaderWriterLock _locker = new ReaderWriterLock();
         private static readonly TimeSpan LockerTimeout = TimeSpan.FromMilliseconds(50);
 
@@ -41,12 +43,13 @@ namespace SharpCR.Features.LocalStorage
             }
         }
 
-        void WriteResource(Action writeOperation)
+        void WriteResource(Action writeOperation, bool writeFile = true)
         {
             try
             {
                 _locker.AcquireWriterLock(LockerTimeout);
                 writeOperation();
+                RecordsUpdated(writeFile);
             }
             finally
             {
@@ -56,7 +59,7 @@ namespace SharpCR.Features.LocalStorage
 
         public IQueryable<ArtifactRecord> ListArtifact(string repoName)
         {
-            return ReadResource(() => _allRecords.AsQueryable());
+            return ReadResource(() => _allArtifacts.AsQueryable());
         }
 
         public ArtifactRecord GetArtifactByTag(string repoName, string tag)
@@ -87,8 +90,7 @@ namespace SharpCR.Features.LocalStorage
             {
                 WriteResource(() =>
                 {
-                    _allRecords.Remove(actualItem);
-                    ArtifactsUpdated();
+                    _allArtifacts.Remove(actualItem);
                 });
             }
         }
@@ -100,9 +102,8 @@ namespace SharpCR.Features.LocalStorage
             {
                 WriteResource(() =>
                 {
-                    _allRecords.Remove(actualItem);
-                    _allRecords.Add(artifactRecord);
-                    ArtifactsUpdated();
+                    _allArtifacts.Remove(actualItem);
+                    _allArtifacts.Add(artifactRecord);
                 });
             }
         }
@@ -111,48 +112,69 @@ namespace SharpCR.Features.LocalStorage
         {
             WriteResource(() =>
             {
-                _allRecords.Add(artifactRecord);
-                ArtifactsUpdated();
+                _allArtifacts.Add(artifactRecord);
             });
         }
 
         public BlobRecord GetBlobByDigest(string repoName, string digest)
         {
-            throw new NotImplementedException();
+            return ReadResource(() =>
+            {
+                return _allBlobsByRepo.TryGetValue(repoName, out var repoBlobs)
+                    ? repoBlobs.FirstOrDefault(a =>
+                        string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
+                    : null;
+            });
         }
 
         public void DeleteBlob(BlobRecord blobRecord)
         {
-            throw new NotImplementedException();
+            var actualItem = GetBlobByDigest(blobRecord.RepositoryName, blobRecord.DigestString);
+            if (actualItem != null)
+            {
+                WriteResource(() =>
+                {
+                    _allBlobs.Remove(actualItem);
+                });
+            }
         }
 
         public void CreateBlob(BlobRecord blobRecord)
         {
-            throw new NotImplementedException();
+            WriteResource(() =>
+            {
+                _allBlobs.Add(blobRecord);
+            });
         }
-
 
         private void ReadFromFile()
         {
-            var  dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
-            if (!File.Exists(dataFile))
+            WriteResource(() =>
             {
-                _allRecords = new HashSet<ArtifactRecord>();
-                return;
-            }
+                var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
+                if (!File.Exists(dataFile))
+                {
+                    _allArtifacts = new HashSet<ArtifactRecord>();
+                    _allBlobs = new HashSet<BlobRecord>();
+                    return;
+                }
 
-            using var fs = File.OpenRead(dataFile);
-            var bytes = File.ReadAllBytes(dataFile);
-            var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-            _allRecords = storedObject.Artifacts.ToHashSet();
+                using var fs = File.OpenRead(dataFile);
+                var bytes = File.ReadAllBytes(dataFile);
+                var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes,
+                    new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+                _allArtifacts = storedObject.Artifacts.ToHashSet();
+                _allBlobs = storedObject.Blobs.ToHashSet();
+            }, false);
         }
 
-        private void ArtifactsUpdated()
+        private void RecordsUpdated(bool writeFile)
         {
-            _allRecordsByRepo = _allRecords
-                .GroupBy(a => a.RepositoryName)
-                .ToDictionary(g => g.Key,
-                    g=> g.ToList());
+            SyncIndexes();
+            if (!writeFile)
+            {
+                return;
+            }
 
             Task.Run(() =>
             {
@@ -160,7 +182,8 @@ namespace SharpCR.Features.LocalStorage
                 {
                     var dataObjects = new DataObjects
                     {
-                        Artifacts = _allRecords.ToArray()
+                        Artifacts = _allArtifacts.ToArray(),
+                        Blobs = _allBlobs.ToArray()
                     };
 
                     var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
@@ -170,11 +193,25 @@ namespace SharpCR.Features.LocalStorage
                 });
             });
         }
+
+        private void SyncIndexes()
+        {
+            _allRecordsByRepo = _allArtifacts
+                .GroupBy(a => a.RepositoryName)
+                .ToDictionary(g => g.Key,
+                    g => g.ToList());
+            
+            _allBlobsByRepo = _allBlobs
+                .GroupBy(a => a.RepositoryName)
+                .ToDictionary(g => g.Key,
+                    g => g.ToList());
+        }
     }
 
     public class DataObjects
     {
         public ArtifactRecord[] Artifacts { get; set; }
+        public BlobRecord[] Blobs { get; set; }
 
     }
 }
