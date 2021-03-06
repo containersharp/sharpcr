@@ -17,7 +17,8 @@ namespace SharpCR.Registry.Tests
 
         public void Delete(string location)
         {
-            _blobs.Remove(location);
+            if(_blobs.ContainsKey(location))
+                _blobs.Remove(location);
         }
 
 

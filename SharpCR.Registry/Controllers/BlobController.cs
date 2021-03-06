@@ -47,7 +47,7 @@ namespace SharpCR.Registry.Controllers
             if (!_blobStorage.SupportsDownloading)
             {
                 var content = _blobStorage.Read(blob.StorageLocation);
-                return new FileStreamResult(content, "application/octet-stream");
+                return new FileStreamResult(content, blob.MediaType ?? "application/octet-stream");
             }
             else
             {
@@ -155,12 +155,14 @@ namespace SharpCR.Registry.Controllers
             fileReceived.Dispose();
             blobTempFile.Delete();
 
+            var mediaType = Request.Headers["Content-Type"].ToString();
             var blobRecord = new BlobRecord
             {
                 RepositoryName = repo,
                 DigestString = computedDigestString,
                 StorageLocation = savedLocation,
-                ContentLength = blobTempFile.Length
+                ContentLength = blobTempFile.Length,
+                MediaType = string.IsNullOrEmpty(mediaType) ? null : mediaType
             };
             _recordStore.CreateBlob(blobRecord);
 

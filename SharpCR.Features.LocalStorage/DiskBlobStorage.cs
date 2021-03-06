@@ -48,7 +48,6 @@ namespace SharpCR.Features.LocalStorage
             }
 
             using var outputStream = File.Create(savePath);
-            stream.Seek(0, SeekOrigin.Begin);
             stream.CopyTo(outputStream);
             
             return savePath.Substring(_storageBasePath.Length).Trim(Path.DirectorySeparatorChar);
