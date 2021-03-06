@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -28,9 +29,9 @@ namespace SharpCR.Registry.Controllers
         [RegistryRoute("blobs/{digest}")]
         [HttpGet]
         [HttpHead]
-        public IActionResult Get(string repo, string digest)
+        public async Task<IActionResult> Get(string repo, string digest)
         {
-            var blob = _recordStore.GetBlobByDigest(repo, digest);
+            var blob = await _recordStore.GetBlobByDigestAsync(repo, digest);
             if (blob == null)
             {
                 return NotFound();
@@ -46,36 +47,32 @@ namespace SharpCR.Registry.Controllers
 
             if (!_blobStorage.SupportsDownloading)
             {
-                var content = _blobStorage.Read(blob.StorageLocation);
+                var content = await _blobStorage.ReadAsync(blob.StorageLocation);
                 return new FileStreamResult(content, blob.MediaType ?? "application/octet-stream");
             }
             else
             {
-                var downloadableUrl = _blobStorage.GenerateDownloadUrl(blob.StorageLocation);
+                var downloadableUrl = await _blobStorage.GenerateDownloadUrlAsync(blob.StorageLocation);
                 return Redirect(downloadableUrl);
             }
         }
 
         [RegistryRoute("blobs/uploads")]
         [HttpPost]
-        public IActionResult CreateUpload(string repo, [FromQuery] string digest, [FromQuery] string mount, [FromQuery] string @from)
+        public async Task<IActionResult> CreateUpload(string repo, [FromQuery] string digest, [FromQuery] string mount, [FromQuery] string @from)
         {
             var sessionId = $"{_settings.BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
-            var singlePost = !string.IsNullOrEmpty(digest);
+            var monolithicUpload = !string.IsNullOrEmpty(digest);
             var isMount = !string.IsNullOrEmpty(mount);
             var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
 
-            if (singlePost)
+            if (monolithicUpload)
             {
-                return FinishUploading(
-                    repo,
-                    digest,
-                    new FileInfo(TempPathForUploadingBlob(sessionId)),
-                    chunkedEncoding);
+                return await FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)), chunkedEncoding);
             }
             else if (isMount)
             {
-                return MountBlob(repo, mount, @from, sessionId);
+                return await MountBlob(repo, mount, @from, sessionId);
             }
             else
             {
@@ -86,7 +83,7 @@ namespace SharpCR.Registry.Controllers
         [RegistryRoute("blobs/uploads/{sessionId}")]
         [HttpPatch]
         [HttpPut]
-        public IActionResult ContinueUpload(string repo, string sessionId, [FromQuery] string digest)
+        public async Task<IActionResult> ContinueUpload(string repo, string sessionId, [FromQuery] string digest)
         {
             var sessionIdPrefix = sessionId.Split("_", StringSplitOptions.RemoveEmptyEntries);
             if (sessionIdPrefix.Length != 2 || !string.Equals(sessionIdPrefix[0], _settings.BlobUploadSessionIdPrefix))
@@ -101,35 +98,37 @@ namespace SharpCR.Registry.Controllers
             if (receivingChunks)
             {
                 Response.Headers.Add("Docker-Upload-UUID", sessionId);
-                return !SaveChunk(blobTempFile, chunkedEncoding, false, out var exceptionalResult)
-                    ? exceptionalResult
-                    : Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
+                var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, false);
+                return chunkSaveSucceeded.Item1 
+                    ? Accepted($"/v2/{repo}/blobs/uploads/{sessionId}")
+                    : chunkSaveSucceeded.Item2;
             }
 
-            return FinishUploading(repo, digest, blobTempFile, chunkedEncoding);
+            return await FinishUploading(repo, digest, blobTempFile, chunkedEncoding);
         }
 
         [RegistryRoute("blobs/{digest}")]
         [HttpDelete]
-        public ActionResult Delete(string repo, string digest)
+        public async Task<ActionResult> Delete(string repo, string digest)
         {
-            var blob = _recordStore.GetBlobByDigest(repo, digest);
+            var blob = await _recordStore.GetBlobByDigestAsync(repo, digest);
             if (blob == null)
             {
                 return NotFound();
             }
 
-            _recordStore.DeleteBlob(blob);
-            _blobStorage.Delete(blob.StorageLocation);
+            await _recordStore.DeleteBlobAsync(blob);
+            await _blobStorage.DeleteAsync(blob.StorageLocation);
             return Accepted();
         }
 
 
-        private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding)
+        private async Task<IActionResult> FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding)
         {
-            if (!SaveChunk(blobTempFile, chunkedEncoding, true, out var exceptionalResult))
+            var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, true);
+            if (!chunkSaveSucceeded.Item1)
             {
-                return exceptionalResult;
+                return chunkSaveSucceeded.Item2;
             }
 
             // refresh disk status
@@ -141,7 +140,7 @@ namespace SharpCR.Registry.Controllers
                 return BadRequest();
             }
 
-            using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
+            await using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
             var computedDigest = Digest.Compute(fileReceived);
             var computedDigestString = computedDigest.ToString();
             if (requestedDigest != null && !requestedDigest.Equals(computedDigest))
@@ -151,8 +150,8 @@ namespace SharpCR.Registry.Controllers
             }
 
             fileReceived.Seek(0, SeekOrigin.Begin);
-            var savedLocation = _blobStorage.Save(repo, computedDigestString, fileReceived);
-            fileReceived.Dispose();
+            var savedLocation = await _blobStorage.SaveAsync(repo, computedDigestString, fileReceived);
+            await fileReceived.DisposeAsync();
             blobTempFile.Delete();
 
             var mediaType = Request.Headers["Content-Type"].ToString();
@@ -164,7 +163,7 @@ namespace SharpCR.Registry.Controllers
                 ContentLength = blobTempFile.Length,
                 MediaType = string.IsNullOrEmpty(mediaType) ? null : mediaType
             };
-            _recordStore.CreateBlob(blobRecord);
+            await _recordStore.CreateBlobAsync(blobRecord);
 
             Response.Headers.Add("Docker-Content-Digest", computedDigestString);
             return Created($"/v2/{repo}/blobs/{computedDigestString}", null);
@@ -176,9 +175,9 @@ namespace SharpCR.Registry.Controllers
             return Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
         }
 
-        IActionResult MountBlob(string repo, string digest, string @from, string sessionId)
+        async Task<IActionResult> MountBlob(string repo, string digest, string @from, string sessionId)
         {
-            var existedBlob = _recordStore.GetBlobByDigest(@from, digest);
+            var existedBlob = await _recordStore.GetBlobByDigestAsync(@from, digest);
             if (existedBlob == null)
             {
                 return StartUploading(repo, sessionId);
@@ -189,28 +188,27 @@ namespace SharpCR.Registry.Controllers
                 RepositoryName = repo,
                 DigestString = digest,
                 StorageLocation = existedBlob.StorageLocation,
-                ContentLength = existedBlob.ContentLength
+                ContentLength = existedBlob.ContentLength,
+                MediaType = existedBlob.MediaType
             };
-            _recordStore.CreateBlob(blobRecord);
+            await _recordStore.CreateBlobAsync(blobRecord);
 
             Response.Headers.Add("Docker-Content-Digest", digest);
-
             return Created($"/v2/{repo}/blobs/{digest}", null);
         }
 
-        private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, out IActionResult actionResult)
+        private async Task<Tuple<bool, IActionResult>> SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing)
         {
-            actionResult = null;
             var requestContentLength = Request.Headers.ContentLength;
             if (requestContentLength == 0)
             {
-                return true;
+                return Tuple.Create(true, (IActionResult)null);
             }
 
             var existingLength = tempFile.Exists ? tempFile.Length : 0;
-            if (!chunkedEncoding && !ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out actionResult))
+            if (!chunkedEncoding && !ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out var actionResult))
             {
-                return false;
+                return Tuple.Create(false, actionResult);
             }
 
             if (!tempFile.Directory!.Exists)
@@ -218,25 +216,23 @@ namespace SharpCR.Registry.Controllers
                 tempFile.Directory.Create();
             }
 
-            using var receivedStream = tempFile.Exists ? tempFile.OpenWrite() : tempFile.Create();
-            Request.Body.CopyTo(receivedStream);
+            await using var receivedStream = tempFile.Exists ? tempFile.OpenWrite() : tempFile.Create();
+            await Request.Body.CopyToAsync(receivedStream);
 
             var updatedLength = receivedStream.Length;
             var receivedLength = updatedLength - existingLength;
-            if (!closing && receivedLength > 0)
+            if (receivedLength == 0 || (!chunkedEncoding && requestContentLength.HasValue && requestContentLength != receivedLength))
+            {
+                await receivedStream.DisposeAsync();
+                actionResult = BadRequest();
+                return Tuple.Create(false, actionResult);
+            }
+
+            if (!closing)
             {
                 Response.Headers.Add("Range", $"{existingLength}-{updatedLength - 1}");
             }
-
-            if (!chunkedEncoding && requestContentLength != receivedLength)
-            {
-                receivedStream.Dispose();
-                tempFile.Delete();
-                actionResult = BadRequest();
-                return false;
-            }
-
-            return true;
+            return Tuple.Create(true, (IActionResult)null);
         }
 
         private bool ValidateContentRange(string requestContentRange, long? requestContentLength, long existingLength, out IActionResult actionResult)

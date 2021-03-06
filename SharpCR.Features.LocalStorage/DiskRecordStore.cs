@@ -57,35 +57,38 @@ namespace SharpCR.Features.LocalStorage
             }
         }
 
-        public IQueryable<ArtifactRecord> ListArtifact(string repoName)
+        public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
         {
-            return ReadResource(() => _allArtifacts.AsQueryable());
+            var result = ReadResource(() => _allArtifacts.AsQueryable());
+            return Task.FromResult(result);
         }
 
-        public ArtifactRecord GetArtifactByTag(string repoName, string tag)
+        public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
         {
-            return ReadResource(() =>
+            var artifactRecord = ReadResource(() =>
             {
                 return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
-                        ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
-                        : null;
+                    ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
+                    : null;
             });
+            return Task.FromResult(artifactRecord);
         }
 
-        public ArtifactRecord GetArtifactByDigest(string repoName, string digestString)
+        public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
         {
-            return ReadResource(() =>
+            var artifactRecord = ReadResource(() =>
             {
                 return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
                     ? repoArtifacts.FirstOrDefault(a =>
                         string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
                     : null;
             });
+            return Task.FromResult(artifactRecord);
         }
 
-        public void DeleteArtifact(ArtifactRecord artifactRecord)
+        public async Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var actualItem = GetArtifactByDigest(artifactRecord.RepositoryName, artifactRecord.DigestString);
+            var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
             if (actualItem != null)
             {
                 WriteResource(() =>
@@ -95,9 +98,9 @@ namespace SharpCR.Features.LocalStorage
             }
         }
 
-        public void UpdateArtifact(ArtifactRecord artifactRecord)
+        public async Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var actualItem = GetArtifactByDigest(artifactRecord.RepositoryName, artifactRecord.DigestString);
+            var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
             if (actualItem != null)
             {
                 WriteResource(() =>
@@ -108,28 +111,30 @@ namespace SharpCR.Features.LocalStorage
             }
         }
 
-        public void CreateArtifact(ArtifactRecord artifactRecord)
+        public Task CreateArtifactAsync(ArtifactRecord artifactRecord)
         {
             WriteResource(() =>
             {
                 _allArtifacts.Add(artifactRecord);
             });
+            return Task.CompletedTask;
         }
 
-        public BlobRecord GetBlobByDigest(string repoName, string digest)
+        public Task<BlobRecord> GetBlobByDigestAsync(string repoName, string digest)
         {
-            return ReadResource(() =>
+            var blobRecord = ReadResource(() =>
             {
                 return _allBlobsByRepo.TryGetValue(repoName, out var repoBlobs)
                     ? repoBlobs.FirstOrDefault(a =>
                         string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
                     : null;
             });
+            return Task.FromResult(blobRecord);
         }
 
-        public void DeleteBlob(BlobRecord blobRecord)
+        public async Task DeleteBlobAsync(BlobRecord blobRecord)
         {
-            var actualItem = GetBlobByDigest(blobRecord.RepositoryName, blobRecord.DigestString);
+            var actualItem = await GetBlobByDigestAsync(blobRecord.RepositoryName, blobRecord.DigestString);
             if (actualItem != null)
             {
                 WriteResource(() =>
@@ -139,12 +144,13 @@ namespace SharpCR.Features.LocalStorage
             }
         }
 
-        public void CreateBlob(BlobRecord blobRecord)
+        public Task CreateBlobAsync(BlobRecord blobRecord)
         {
             WriteResource(() =>
             {
                 _allBlobs.Add(blobRecord);
             });
+            return Task.CompletedTask;
         }
 
         private void ReadFromFile()

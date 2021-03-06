@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers.ResponseModels;
 using SharpCR.Registry.Models;
@@ -19,11 +20,11 @@ namespace SharpCR.Registry.Controllers
         
         [RegistryRoute("tags/list")]
         [HttpGet]
-        public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
+        public async Task<ActionResult<TagListResponse>> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableArtifacts = _recordStore.ListArtifact(repo).OrderBy(t => t.Tag);
+            var queryableArtifacts = (await _recordStore.ListArtifactAsync(repo)).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
                 var allTags = queryableArtifacts.Select(t => t.Tag).ToList();

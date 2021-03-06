@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SharpCR.Registry.Controllers;
@@ -15,7 +16,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
     public class BlobControllerTests
     {
         [Fact]
-        public void Get()
+        public async Task Get()
         {
             var repositoryName = "foo/abcd";
             var digest = "digest";
@@ -26,51 +27,51 @@ namespace SharpCR.Registry.Tests.ControllerTests
                 {
                     RepositoryName = repositoryName,
                     DigestString = digest, ContentLength = blobStream.Length,
-                    StorageLocation = blobStorage.Save(repositoryName, digest, blobStream)
+                    StorageLocation = await blobStorage.SaveAsync(repositoryName, digest, blobStream)
                 });
 
             var controller = CreateController(dataStore, blobStorage);
             controller.HttpContext.Request.Method = "GET";
-            var response = controller.Get(repositoryName, digest) as FileStreamResult;
+            var response = await controller.Get(repositoryName, digest) as FileStreamResult;
 
-            using var responseStream = new MemoryStream();
-            response?.FileStream.CopyTo(responseStream);
             Assert.NotNull(response);
+            await using var responseStream = new MemoryStream();
+            await response.FileStream.CopyToAsync(responseStream);
             Assert.Equal(blobStream.Length, response.FileStream.Length);
             Assert.Equal("application/octet-stream", response.ContentType);
             Assert.True(blobStream.ToArray().SequenceEqual(responseStream.ToArray()));
         }
 
         [Fact]
-        public void Delete()
+        public async Task Delete()
         {
             var repositoryName = "foo/abcd";
             var digest = "digest";
 
             var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            var blobLocation = blobStorage.Save(repositoryName, digest, blobStream);
+            var blobLocation = await blobStorage.SaveAsync(repositoryName, digest, blobStream);
 
             var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, StorageLocation = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);
 
             var controller = CreateController(dataStore, blobStorage);
-            var response = controller.Delete(repositoryName, digest) as ObjectResult;
+            var response = await controller.Delete(repositoryName, digest) as ObjectResult;
 
             Assert.NotNull(response);
             Assert.Equal(202, response.StatusCode);
-            Assert.Null(dataStore.GetBlobByDigest(repositoryName, digest));
-            Assert.Null(blobStorage.Read(blobLocation));
+            Assert.Null(await dataStore.GetBlobByDigestAsync(repositoryName, digest));
+            Assert.Null(await blobStorage.ReadAsync(blobLocation));
         }
         // todo: no blobs should be deleted if they are referenced by any manifest
 
         [Fact]
-        public void CreateUpload()
+        public async Task CreateUpload()
         {
             var controller = CreateController(new RecordStoreStub(), new BlobStorageStub());
             controller.Request.Method = "POST";
 
-            var response = controller.CreateUpload("abcd/foo-bar", null, null, null) as AcceptedResult;
+            var response = await controller.CreateUpload("abcd/foo-bar", null, null, null) as AcceptedResult;
 
             Assert.NotNull(response);
             Assert.Equal(202, response.StatusCode);
@@ -79,14 +80,14 @@ namespace SharpCR.Registry.Tests.ControllerTests
         }
 
         [Fact]
-        public void MonolithicUpload()
+        public async Task MonolithicUpload()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
             var controller = CreateController(recordStore, blobStorage);
             var contentDigest = SendStreamByRequest(controller);
 
-            var response = controller.CreateUpload("abcd/foo-bar", contentDigest.ToString(), null, null) as CreatedResult;
+            var response = await controller.CreateUpload("abcd/foo-bar", contentDigest.ToString(), null, null) as CreatedResult;
 
             Assert.NotNull(response);
             Assert.Equal(201, response.StatusCode);
@@ -94,12 +95,12 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.NotEmpty(controller.Response.Headers["Docker-Content-Digest"].ToString());
             Assert.Empty(controller.Response.Headers["Docker-Upload-UUID"].ToString());
 
-            Assert.NotNull(recordStore.GetBlobByDigest("abcd/foo-bar", contentDigest.ToString()));
+            Assert.NotNull(await recordStore.GetBlobByDigestAsync("abcd/foo-bar", contentDigest.ToString()));
             Assert.Equal(contentDigest, Digest.Compute(blobStorage.GetStoredBlobs().Single()));
         }
 
         [Fact]
-        public void MountUpload()
+        public async Task MountUpload()
         {
             var repo1 = "repo1";
             var repo2 = "repo2";
@@ -115,18 +116,18 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var recordStore = new RecordStoreStub().WithBlobs(blobRecord1);
 
             var controller = CreateController(recordStore, null);
-            var response = controller.CreateUpload(repo2, "", digest, repo1) as CreatedResult;
+            var response = await controller.CreateUpload(repo2, "", digest, repo1) as CreatedResult;
 
             Assert.NotNull(response);
             Assert.Equal((int) HttpStatusCode.Created, response.StatusCode);
             Assert.NotEmpty(response.Location);
 
-            var blobRecord2 = recordStore.GetBlobByDigest(repo2, digest);
+            var blobRecord2 = await  recordStore.GetBlobByDigestAsync(repo2, digest);
             Assert.NotNull(blobRecord2);
         }
 
         [Fact]
-        public void ContinueUpload()
+        public async Task ContinueUpload()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
@@ -134,7 +135,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             SendStreamByRequest(controller, "PATCH");
             var sessionId = $"{new Settings().BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
 
-            var response = controller.ContinueUpload("abcd/foo-bar", sessionId, null) as AcceptedResult;
+            var response = await controller.ContinueUpload("abcd/foo-bar", sessionId, null) as AcceptedResult;
 
             Assert.NotNull(response);
             Assert.NotEmpty(response.Location);
@@ -144,7 +145,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         }
 
         [Fact]
-        public void ContinueUploadWithChunkedEncoding()
+        public async Task ContinueUploadWithChunkedEncoding()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
@@ -155,7 +156,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             controller.Request.ContentLength = null;
             var sessionId = $"{new Settings().BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
 
-            var response = controller.ContinueUpload("abcd/foo-bar", sessionId, null) as AcceptedResult;
+            var response = await controller.ContinueUpload("abcd/foo-bar", sessionId, null) as AcceptedResult;
 
             Assert.NotNull(response);
             Assert.Equal(202, response.StatusCode);
@@ -164,12 +165,12 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.Empty(controller.Response.Headers["Docker-Content-Digest"].ToString());
             Assert.Equal($"0-{sendLength - 1}", controller.Response.Headers["Range"].ToString());
 
-            Assert.Null(recordStore.GetBlobByDigest("abcd/foo-bar", contentDigest.ToString()));
+            Assert.Null(await recordStore.GetBlobByDigestAsync("abcd/foo-bar", contentDigest.ToString()));
             Assert.Empty(blobStorage.GetStoredBlobs());
         }
 
         [Fact]
-        public void FinishUploadWithChunk()
+        public async Task FinishUploadWithChunk()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
@@ -177,7 +178,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var contentDigest = SendStreamByRequest(controller, "PUT");
             var sessionId = $"{new Settings().BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
 
-            var response = controller.ContinueUpload("abcd/foo-bar", sessionId, contentDigest.ToString()) as CreatedResult;
+            var response = await controller.ContinueUpload("abcd/foo-bar", sessionId, contentDigest.ToString()) as CreatedResult;
 
             Assert.NotNull(response);
             Assert.Equal(201, response.StatusCode);
@@ -185,12 +186,12 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.Empty(controller.Response.Headers["Docker-Upload-UUID"].ToString());
             Assert.Equal(contentDigest.ToString(), controller.Response.Headers["Docker-Content-Digest"].ToString());
 
-            Assert.NotNull(recordStore.GetBlobByDigest("abcd/foo-bar", contentDigest.ToString()));
+            Assert.NotNull(await recordStore.GetBlobByDigestAsync("abcd/foo-bar", contentDigest.ToString()));
             Assert.Equal(contentDigest, Digest.Compute(blobStorage.GetStoredBlobs().Single()));
         }
 
         [Fact]
-        public void FinishUploadWithChunkedEncoding()
+        public async Task FinishUploadWithChunkedEncoding()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
@@ -200,7 +201,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             controller.Request.ContentLength = null;
             var sessionId = $"{new Settings().BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
 
-            var response = controller.ContinueUpload("abcd/foo-bar", sessionId, contentDigest.ToString()) as CreatedResult;
+            var response = await controller.ContinueUpload("abcd/foo-bar", sessionId, contentDigest.ToString()) as CreatedResult;
 
             Assert.NotNull(response);
             Assert.Equal(201, response.StatusCode);
@@ -209,25 +210,25 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.NotEmpty(controller.Response.Headers["Docker-Content-Digest"].ToString());
             Assert.Empty(controller.Response.Headers["Range"].ToString());
 
-            Assert.NotNull(recordStore.GetBlobByDigest("abcd/foo-bar", contentDigest.ToString()));
+            Assert.NotNull(await recordStore.GetBlobByDigestAsync("abcd/foo-bar", contentDigest.ToString()));
             Assert.Equal(contentDigest, Digest.Compute(blobStorage.GetStoredBlobs().Single()));
         }
 
         [Fact]
-        public void FinishUploadWithoutChunk()
+        public async Task FinishUploadWithoutChunk()
         {
             var recordStore = new RecordStoreStub();
             var blobStorage = new BlobStorageStub();
             var controller = CreateController(recordStore, blobStorage);
             var contentDigest = SendStreamByRequest(controller, "PATCH");
             var sessionId = $"{new Settings().BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
-            controller.ContinueUpload("abcd/foo-bar", sessionId, null);
+            await controller.ContinueUpload("abcd/foo-bar", sessionId, null);
             controller.Request.Method = "PUT";
             controller.Request.Body = null;
             controller.Request.ContentLength = 0;
             controller.Response.Headers.Clear();
 
-            var createdResult = controller.ContinueUpload("abcd/foo-bar", sessionId, null) as CreatedResult;
+            var createdResult = await controller.ContinueUpload("abcd/foo-bar", sessionId, null) as CreatedResult;
 
 
             Assert.NotNull(createdResult);
@@ -236,7 +237,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             Assert.Empty(controller.Response.Headers["Docker-Upload-UUID"].ToString());
             Assert.Equal(contentDigest.ToString(), controller.Response.Headers["Docker-Content-Digest"].ToString());
 
-            Assert.NotNull(recordStore.GetBlobByDigest("abcd/foo-bar", contentDigest.ToString()));
+            Assert.NotNull(await recordStore.GetBlobByDigestAsync("abcd/foo-bar", contentDigest.ToString()));
             Assert.Equal(contentDigest, Digest.Compute(blobStorage.GetStoredBlobs().Single()));
         }
 

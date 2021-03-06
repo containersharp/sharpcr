@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -13,7 +11,6 @@ namespace SharpCR.Registry.Tests.ApiTests
     public class BlobApiTests: IClassFixture<WebApplicationFactory<Startup>>
     {
         private readonly HttpClient _client;
-        private readonly BlobStorageStub _stubBlobStorage;
         private readonly RecordStoreStub _stubRecordStore;
         
         private const string RepositoryName = "foo/bar";
@@ -22,14 +19,14 @@ namespace SharpCR.Registry.Tests.ApiTests
         public BlobApiTests(WebApplicationFactory<Startup> factory)
         {
             var blobStream = TestUtilities.GetManifestResourceStream("manifest.v2.json");
-            _stubBlobStorage = new BlobStorageStub();
+            var stubBlobStorage = new BlobStorageStub();
             _stubRecordStore = new RecordStoreStub().WithBlobs(new BlobRecord
                 {
                     RepositoryName = RepositoryName,
                     DigestString = DigestString,
                     ContentLength = blobStream.Length,
                     MediaType = "application/vnd.docker.image.rootfs.diff.tar.gzip",
-                    StorageLocation = _stubBlobStorage.Save(RepositoryName, DigestString, blobStream)
+                    StorageLocation = stubBlobStorage.SaveAsync(RepositoryName, DigestString, blobStream).Result
                 },
                 new BlobRecord
                 {
@@ -40,7 +37,7 @@ namespace SharpCR.Registry.Tests.ApiTests
 
             _client = factory.CreateClientWithServices((ctx, services) =>
             {
-                services.AddSingleton<IBlobStorage>(_stubBlobStorage);
+                services.AddSingleton<IBlobStorage>(stubBlobStorage);
                 services.AddSingleton<IRecordStore>(_stubRecordStore);
             });
         }
@@ -76,7 +73,7 @@ namespace SharpCR.Registry.Tests.ApiTests
             var response = await _client.DeleteAsync($"/v2/{RepositoryName}/blobs/{DigestString}-deleted");
             
             Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-            Assert.Null(_stubRecordStore.GetBlobByDigest(RepositoryName,$"{DigestString}-deleted"));
+            Assert.Null( await _stubRecordStore.GetBlobByDigestAsync(RepositoryName,$"{DigestString}-deleted"));
         }
         
         
@@ -95,9 +92,9 @@ namespace SharpCR.Registry.Tests.ApiTests
         {
             var response = await _client.PatchAsync($"/v2/{RepositoryName}/blobs/uploads/local_session", new StringContent(string.Empty));
             
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.True(response.Headers.TryGetValues("Docker-Upload-UUID", out _));
-            Assert.True(response.Headers.TryGetValues("Range", out _));
+            Assert.False(response.Headers.TryGetValues("Range", out _));
         }
         
         [Fact]
@@ -106,7 +103,7 @@ namespace SharpCR.Registry.Tests.ApiTests
             var response = await _client.PutAsync($"/v2/{RepositoryName}/blobs/uploads/local_session", new StringContent(string.Empty));
             
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.True(response.Headers.TryGetValues("Docker-Upload-UUID", out _));
+            Assert.False(response.Headers.TryGetValues("Docker-Upload-UUID", out _));
         }
         
     }

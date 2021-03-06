@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using SharpCR.Registry;
@@ -16,22 +17,23 @@ namespace SharpCR.Features.LocalStorage
             _storageBasePath = Path.Combine(contentRoot, config.BlobsDirectoryName);
         }
         
-        public Stream Read(string location)
+        public Task<Stream> ReadAsync(string location)
         {
             var path = MapPath(location);
-            return File.Exists(path) ? File.OpenRead(path) : null;
+            return Task.FromResult(File.Exists(path) ? File.OpenRead(path) : (Stream)null);
         }
 
-        public void Delete(string location)
+        public Task DeleteAsync(string location)
         {
             var path = MapPath(location);
             if (File.Exists(path))
             {
                 File.Delete(path);
             }
+            return Task.CompletedTask;
         }
 
-        public string Save(string repoName, string digest, Stream stream)
+        public async Task<string> SaveAsync(string repoName, string digest, Stream stream)
         {
             var location = Path.Combine(repoName, digest.Replace(':', Path.DirectorySeparatorChar));
             var savePath = MapPath(location);
@@ -47,14 +49,14 @@ namespace SharpCR.Features.LocalStorage
                 File.Delete(savePath);
             }
 
-            using var outputStream = File.Create(savePath);
-            stream.CopyTo(outputStream);
+            await using var outputStream = File.Create(savePath);
+            await stream.CopyToAsync(outputStream);
             
             return savePath.Substring(_storageBasePath.Length).Trim(Path.DirectorySeparatorChar);
         }
 
         public bool SupportsDownloading { get; } = false;
-        public string GenerateDownloadUrl(string location)
+        public Task<string> GenerateDownloadUrlAsync(string location)
         {
             throw new System.NotImplementedException();
         }

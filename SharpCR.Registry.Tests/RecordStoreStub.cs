@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry.Tests
@@ -22,67 +23,75 @@ namespace SharpCR.Registry.Tests
             return this;
         }
 
-        public IQueryable<ArtifactRecord> ListArtifact(string repoName)
+        public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
         {
-            return _artifacts
+            var result= _artifacts
                 .Where(artifact => string.Equals(artifact.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
                 .AsQueryable();
+            
+            return Task.FromResult(result);
         }
 
-        public ArtifactRecord GetArtifactByTag(string repoName, string tag)
+        public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
         {
-            return _artifacts.FirstOrDefault(t =>
+            var record = _artifacts.FirstOrDefault(t =>
                     string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(t.Tag, tag, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(record);
         }
 
-        public ArtifactRecord GetArtifactByDigest(string repoName, string digestString)
+        public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
         {
-            return _artifacts.FirstOrDefault(t =>
+            var record = _artifacts.FirstOrDefault(t =>
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(t.DigestString, digestString, StringComparison.OrdinalIgnoreCase));
-
+            return Task.FromResult(record);
         }
 
-        public void DeleteArtifact(ArtifactRecord artifactRecord)
+        public Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
         {
             var index = _artifacts.IndexOf(artifactRecord);
             if (index >= 0)
             {
                 _artifacts.RemoveAt(index);
             }
+            return Task.CompletedTask;
         }
 
-        public void UpdateArtifact(ArtifactRecord artifactRecord)
+        public async Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            DeleteArtifact(artifactRecord);
-            CreateArtifact(artifactRecord);
+            await DeleteArtifactAsync(artifactRecord);
+            await CreateArtifactAsync(artifactRecord);
         }
 
-        public void CreateArtifact(ArtifactRecord artifactRecord)
+        public Task CreateArtifactAsync(ArtifactRecord artifactRecord)
         {
             _artifacts.Add(artifactRecord);
+            return Task.CompletedTask;
         }
 
-        public BlobRecord GetBlobByDigest(string repoName, string digest)
+        public Task<BlobRecord> GetBlobByDigestAsync(string repoName, string digest)
         {
-            return _blobs.FirstOrDefault(t =>
+            var record = _blobs.FirstOrDefault(t =>
                     string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(t.DigestString, digest, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(record);
         }
 
-        public void DeleteBlob(BlobRecord blobRecord)
+        public Task DeleteBlobAsync(BlobRecord blobRecord)
         {
             var index = _blobs.IndexOf(blobRecord);
             if (index >= 0)
             {
                 _blobs.RemoveAt(index);
             }
+            return Task.CompletedTask;
         }
 
-        public void CreateBlob(BlobRecord blobRecord)
+        public Task CreateBlobAsync(BlobRecord blobRecord)
         {
             _blobs.Add(blobRecord);
+            return Task.CompletedTask;
         }
     }
 }

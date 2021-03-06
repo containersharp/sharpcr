@@ -17,7 +17,6 @@ namespace SharpCR.Registry
                     webBuilder.UseStartup<Startup>()
                         .UseKestrel(op =>
                         {
-                            op.AllowSynchronousIO = true;
                             op.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // 1GB
                         });
                 });

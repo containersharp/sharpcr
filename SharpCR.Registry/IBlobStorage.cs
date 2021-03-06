@@ -1,15 +1,16 @@
 using System.IO;
+using System.Threading.Tasks;
 
 namespace SharpCR.Registry
 {
     public interface IBlobStorage
     {
 
-        Stream Read(string location);
-        void Delete(string location);
-        string Save(string repoName, string digest, Stream stream);
+        Task<Stream> ReadAsync(string location);
+        Task DeleteAsync(string location);
+        Task<string> SaveAsync(string repoName, string digest, Stream stream);
 
         bool SupportsDownloading { get; }
-        string GenerateDownloadUrl(string location);
+        Task<string> GenerateDownloadUrlAsync(string location);
     }
 }

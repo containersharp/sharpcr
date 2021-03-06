@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SharpCR.Registry.Tests
 {
@@ -10,33 +11,35 @@ namespace SharpCR.Registry.Tests
         private readonly Dictionary<string, byte[]> _blobs = new Dictionary<string, byte[]>();
 
 
-        public Stream Read(string location)
+        public Task<Stream> ReadAsync(string location)
         {
-            return _blobs.ContainsKey(location) ? new MemoryStream(_blobs[location]) : null;
+            return Task.FromResult(_blobs.ContainsKey(location) ? new MemoryStream(_blobs[location]) : (Stream)null);
         }
 
-        public void Delete(string location)
+        public Task DeleteAsync(string location)
         {
             if(_blobs.ContainsKey(location))
                 _blobs.Remove(location);
+            
+            return Task.CompletedTask;
         }
 
 
         public bool SupportsDownloading { get; } = false;
 
-        public string GenerateDownloadUrl(string location)
+        public Task<string> GenerateDownloadUrlAsync(string location)
         {
             throw new System.NotImplementedException();
         }
 
-        public string Save(string repoName, string digest, Stream stream)
+        public Task<string> SaveAsync(string repoName, string digest, Stream stream)
         {
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
             
             var key = Guid.NewGuid().ToString();
             _blobs.Add(key, ms.ToArray());
-            return key;
+            return Task.FromResult(key);
         }
 
         public List<byte[]> GetStoredBlobs()

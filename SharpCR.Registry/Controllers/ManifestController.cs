@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SharpCR.Registry.Models;
@@ -28,9 +29,9 @@ namespace SharpCR.Registry.Controllers
         [RegistryRoute("manifests/{reference}")]
         [HttpGet]
         [HttpHead]
-        public ActionResult Get(string repo, string reference)
+        public async Task<ActionResult> Get(string repo, string reference)
         {
-            var artifact = GetArtifactByReference(reference, repo);
+            var artifact = await GetArtifactByReferenceAsync(reference, repo);
             if (artifact == null)
             {
                 return new NotFoundResult();
@@ -52,7 +53,7 @@ namespace SharpCR.Registry.Controllers
 
         [RegistryRoute("manifests/{reference}")]
         [HttpPut]
-        public IActionResult Save(string repo, string reference)
+        public async Task<IActionResult> Save(string repo, string reference)
         {
             string queriedTag = null;
             string queriedDigest = null;
@@ -72,8 +73,8 @@ namespace SharpCR.Registry.Controllers
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
 
-            using var memoryStream = new MemoryStream();
-            Request.Body.CopyTo(memoryStream);
+            await using var memoryStream = new MemoryStream();
+            await Request.Body.CopyToAsync(memoryStream);
             var manifestBytes = memoryStream.ToArray();
             var manifest = acceptableParser.Parse(manifestBytes);
             var pushedDigest  = manifest.Digest;
@@ -84,13 +85,16 @@ namespace SharpCR.Registry.Controllers
             }
 
             var referencedItems = manifest.GetReferencedDescriptors();
-            if(referencedItems.Any(item => !ReferenceExists(item, repo)))
+            foreach (var item in referencedItems)
             {
-                // some of the referenced item does not exist
-                return new StatusCodeResult((int) HttpStatusCode.BadRequest);
+                if (!await ReferenceExistsAsync(item, repo))
+                {
+                    // some of the referenced item does not exist
+                    return new StatusCodeResult((int) HttpStatusCode.BadRequest);    
+                }
             }
 
-            var existingArtifact = queriedTag != null ?  _recordStore.GetArtifactByTag(repo, queriedTag) : null;
+            var existingArtifact = queriedTag != null ?  await _recordStore.GetArtifactByTagAsync(repo, queriedTag) : null;
             if (existingArtifact == null)
             {
                 var artifact = new ArtifactRecord
@@ -101,14 +105,14 @@ namespace SharpCR.Registry.Controllers
                     ManifestBytes = manifest.RawJsonBytes,
                     ManifestMediaType = manifest.MediaType
                 };
-                _recordStore.CreateArtifact(artifact);
+                await _recordStore.CreateArtifactAsync(artifact);
             }
             else
             {
                 existingArtifact.DigestString = pushedDigest;
                 existingArtifact.ManifestBytes = manifestBytes;
                 existingArtifact.ManifestMediaType = manifest.MediaType;
-                _recordStore.UpdateArtifact(existingArtifact);
+                await _recordStore.UpdateArtifactAsync(existingArtifact);
                 // todo: cleanup replaced blobs...
             }
 
@@ -119,15 +123,15 @@ namespace SharpCR.Registry.Controllers
 
         [RegistryRoute("manifests/{reference}")]
         [HttpDelete]
-        public IActionResult Delete(string repo, string reference)
+        public async Task<IActionResult> Delete(string repo, string reference)
         {
-            var artifact = GetArtifactByReference(reference, repo);
+            var artifact = await GetArtifactByReferenceAsync(reference, repo);
             if (artifact == null)
             {
                 return new NotFoundResult();
             }
 
-            _recordStore.DeleteArtifact(artifact);
+            await _recordStore.DeleteArtifactAsync(artifact);
             // todo: delete all orphan blobs...
             return new StatusCodeResult((int)HttpStatusCode.Accepted);
         }
@@ -146,21 +150,21 @@ namespace SharpCR.Registry.Controllers
                 .ToDictionary(i => i.Item1, i => i.Item2);
         }
 
-        private bool ReferenceExists(Descriptor referencedItem, string repoName)
+        private async Task<bool> ReferenceExistsAsync(Descriptor referencedItem, string repoName)
         {
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
-                return (null != _recordStore.GetArtifactByDigest(repoName, referencedItem.Digest));
+                return (null != await _recordStore.GetArtifactByDigestAsync(repoName, referencedItem.Digest));
             }
 
-            return (null != _recordStore.GetBlobByDigest(repoName, referencedItem.Digest));
+            return (null != await _recordStore.GetBlobByDigestAsync(repoName, referencedItem.Digest));
         }
 
-        private ArtifactRecord GetArtifactByReference(string reference, string repoName)
+        private async Task<ArtifactRecord> GetArtifactByReferenceAsync(string reference, string repoName)
         {
             return Digest.TryParse(reference, out _)
-                ? _recordStore.GetArtifactByDigest(repoName, reference)
-                : _recordStore.GetArtifactByTag(repoName, reference);
+                ? await _recordStore.GetArtifactByDigestAsync(repoName, reference)
+                : await _recordStore.GetArtifactByTagAsync(repoName, reference);
         }
     }
 }

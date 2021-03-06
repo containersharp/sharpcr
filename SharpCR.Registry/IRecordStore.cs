@@ -1,24 +1,25 @@
 using System.Linq;
+using System.Threading.Tasks;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry
 {
     public interface IRecordStore
     {
-        IQueryable<ArtifactRecord> ListArtifact(string repoName);
+        Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName);
 
-        ArtifactRecord GetArtifactByTag(string repoName, string tag);
+        Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag);
 
-        ArtifactRecord GetArtifactByDigest(string repoName, string digestString);
+        Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString);
 
-        void DeleteArtifact(ArtifactRecord artifactRecord);
-        void UpdateArtifact(ArtifactRecord artifactRecord);
-        void CreateArtifact(ArtifactRecord artifactRecord);
+        Task DeleteArtifactAsync(ArtifactRecord artifactRecord);
+        Task UpdateArtifactAsync(ArtifactRecord artifactRecord);
+        Task CreateArtifactAsync(ArtifactRecord artifactRecord);
 
-        BlobRecord GetBlobByDigest(string repoName, string digest);
+        Task<BlobRecord> GetBlobByDigestAsync(string repoName, string digest);
 
-        void DeleteBlob(BlobRecord blobRecord);
+        Task DeleteBlobAsync(BlobRecord blobRecord);
         
-        void CreateBlob(BlobRecord blobRecord);
+        Task CreateBlobAsync(BlobRecord blobRecord);
     }
 }

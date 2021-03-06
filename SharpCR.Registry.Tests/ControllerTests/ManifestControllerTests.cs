@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers;
 using SharpCR.Registry.Models.Manifests;
@@ -12,7 +13,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
     public class ManifestControllerTests
     {
         [Fact]
-        public void GetManifest()
+        public async Task GetManifest()
         {
             var repositoryName = "foo/abcd";
             var manifestBytes = Encoding.Default.GetBytes(TestUtilities.GetManifestResource("manifest.v2.json"));
@@ -24,7 +25,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var controller = new ManifestController(dataStore).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
-            var manifestResponse = controller.Get(repositoryName, "v1.0.0");
+            var manifestResponse = await controller.Get(repositoryName, "v1.0.0");
             var fileResult = manifestResponse as FileContentResult;
 
             Assert.NotNull(fileResult);
@@ -34,7 +35,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         }
 
         [Fact]
-        public void DeleteManifest()
+        public async Task DeleteManifest()
         {
             const string repositoryName = "foo/abcd";
             const string tag = "v1.0.0";
@@ -45,16 +46,16 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dataStore = new RecordStoreStub().WithArtifacts(dummyArtifact1, dummyArtifact2);
 
             var controller = new ManifestController(dataStore).SetupHttpContext();
-            var deleteResponse = controller.Delete(repositoryName, tag);
+            var deleteResponse = await controller.Delete(repositoryName, tag);
             var statusCodeResult = deleteResponse as StatusCodeResult;
 
             Assert.NotNull(statusCodeResult);
             Assert.Equal(202, statusCodeResult.StatusCode);
-            Assert.Null(dataStore.GetArtifactByTag(repositoryName, tag));
+            Assert.Null(await dataStore.GetArtifactByTagAsync(repositoryName, tag));
         }
 
         [Fact]
-        public void PutManifest_V2_Schema()
+        public async Task PutManifest_V2_Schema()
         {
             const string repositoryName = "foo/abcd";
             const string tag = "v1.0.0";
@@ -66,9 +67,9 @@ namespace SharpCR.Registry.Tests.ControllerTests
             controller.Request.Headers.Add("Content-Type", manifestType);
             controller.Request.Body = new MemoryStream(manifestBytes);
 
-            var putResponse = controller.Save(repositoryName, tag);
+            var putResponse = await controller.Save(repositoryName, tag);
             var statusCodeResult = putResponse as StatusCodeResult;
-            var storedArtifact = dataStore.GetArtifactByTag(repositoryName, tag);
+            var storedArtifact = await dataStore.GetArtifactByTagAsync(repositoryName, tag);
 
             Assert.NotNull(statusCodeResult);
             Assert.Equal(201, statusCodeResult.StatusCode);
