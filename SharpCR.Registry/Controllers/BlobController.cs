@@ -43,7 +43,7 @@ namespace SharpCR.Registry.Controllers
             {
                 return new EmptyResult();
             }
-            
+
             if (!_blobStorage.SupportsDownloading)
             {
                 var content = _blobStorage.Read(blob.StorageLocation);
@@ -62,17 +62,24 @@ namespace SharpCR.Registry.Controllers
         {
             var sessionId = $"{_settings.BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
             var singlePost = !string.IsNullOrEmpty(digest);
+            var isMount = !string.IsNullOrEmpty(mount);
             var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
 
             if (singlePost)
             {
-                return FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)),
+                return FinishUploading(
+                    repo,
+                    digest,
+                    new FileInfo(TempPathForUploadingBlob(sessionId)),
                     chunkedEncoding);
+            }
+            else if (isMount)
+            {
+                return MountBlob(repo, mount, @from, sessionId);
             }
             else
             {
-                Response.Headers.Add("Docker-Upload-UUID", sessionId);
-                return Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
+                return StartUploading(repo, sessionId);
             }
         }
 
@@ -86,7 +93,7 @@ namespace SharpCR.Registry.Controllers
             {
                 return BadRequest();
             }
-            
+
             var blobTempFile = new FileInfo(TempPathForUploadingBlob(sessionId));
             var receivingChunks = string.Equals(Request.Method, HttpMethod.Patch.ToString(), StringComparison.OrdinalIgnoreCase);
             var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
@@ -94,11 +101,11 @@ namespace SharpCR.Registry.Controllers
             if (receivingChunks)
             {
                 Response.Headers.Add("Docker-Upload-UUID", sessionId);
-                return !SaveChunk(blobTempFile, chunkedEncoding,  false, out var exceptionalResult) 
-                    ? exceptionalResult 
+                return !SaveChunk(blobTempFile, chunkedEncoding, false, out var exceptionalResult)
+                    ? exceptionalResult
                     : Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
             }
-            
+
             return FinishUploading(repo, digest, blobTempFile, chunkedEncoding);
         }
 
@@ -116,8 +123,8 @@ namespace SharpCR.Registry.Controllers
             _blobStorage.Delete(blob.StorageLocation);
             return Accepted();
         }
-        
-        
+
+
         private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding)
         {
             if (!SaveChunk(blobTempFile, chunkedEncoding, true, out var exceptionalResult))
@@ -133,7 +140,7 @@ namespace SharpCR.Registry.Controllers
                 // If we are closing the upload and we can't find the stored temporary file, there must be something wrong.
                 return BadRequest();
             }
-            
+
             using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
             var computedDigest = Digest.Compute(fileReceived);
             var computedDigestString = computedDigest.ToString();
@@ -156,9 +163,37 @@ namespace SharpCR.Registry.Controllers
                 ContentLength = blobTempFile.Length
             };
             _recordStore.CreateBlob(blobRecord);
-            
+
             Response.Headers.Add("Docker-Content-Digest", computedDigestString);
             return Created($"/v2/{repo}/blobs/{computedDigestString}", null);
+        }
+
+        IActionResult StartUploading(string repo, string sessionId)
+        {
+            Response.Headers.Add("Docker-Upload-UUID", sessionId);
+            return Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
+        }
+
+        IActionResult MountBlob(string repo, string digest, string @from, string sessionId)
+        {
+            var existedBlob = _recordStore.GetBlobByDigest(@from, digest);
+            if (existedBlob == null)
+            {
+                return StartUploading(repo, sessionId);
+            }
+
+            var blobRecord = new BlobRecord
+            {
+                RepositoryName = repo,
+                DigestString = digest,
+                StorageLocation = existedBlob.StorageLocation,
+                ContentLength = existedBlob.ContentLength
+            };
+            _recordStore.CreateBlob(blobRecord);
+
+            Response.Headers.Add("Docker-Content-Digest", digest);
+
+            return Created($"/v2/{repo}/blobs/{digest}", null);
         }
 
         private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, out IActionResult actionResult)
@@ -180,14 +215,15 @@ namespace SharpCR.Registry.Controllers
             {
                 tempFile.Directory.Create();
             }
+
             using var receivedStream = tempFile.Exists ? tempFile.OpenWrite() : tempFile.Create();
             Request.Body.CopyTo(receivedStream);
-            
+
             var updatedLength = receivedStream.Length;
             var receivedLength = updatedLength - existingLength;
             if (!closing && receivedLength > 0)
             {
-                Response.Headers.Add("Range", $"{existingLength}-{updatedLength-1}");
+                Response.Headers.Add("Range", $"{existingLength}-{updatedLength - 1}");
             }
 
             if (!chunkedEncoding && requestContentLength != receivedLength)
@@ -197,17 +233,18 @@ namespace SharpCR.Registry.Controllers
                 actionResult = BadRequest();
                 return false;
             }
+
             return true;
         }
 
-        private bool ValidateContentRange(string requestContentRange,  long? requestContentLength, long existingLength, out IActionResult actionResult)
+        private bool ValidateContentRange(string requestContentRange, long? requestContentLength, long existingLength, out IActionResult actionResult)
         {
             actionResult = null;
             if (string.IsNullOrEmpty(requestContentRange))
             {
                 return true;
             }
-                
+
             var regex = new Regex(@"^(bytes\s)?([\d]+)-([\d]+)(/.*)?$", RegexOptions.Compiled);
             var rangeMatch = regex.Match(requestContentRange);
             if (!rangeMatch.Success)
@@ -220,7 +257,7 @@ namespace SharpCR.Registry.Controllers
             var rangeEnd = long.Parse(rangeMatch.Groups[3].Value);
             if (rangeStart != existingLength || requestContentLength != (rangeEnd - rangeStart + 1))
             {
-                Response.Headers.Add("Range", $"0-{existingLength-1}");
+                Response.Headers.Add("Range", $"0-{existingLength - 1}");
                 actionResult = new StatusCodeResult((int) HttpStatusCode.RequestedRangeNotSatisfiable);
                 return false;
             }
@@ -232,6 +269,5 @@ namespace SharpCR.Registry.Controllers
         {
             return Path.Combine(_settings.TemporaryFilesRootPath, "uploading-blobs", sessionId);
         }
-
     }
 }
