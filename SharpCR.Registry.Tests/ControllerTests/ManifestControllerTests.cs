@@ -1,7 +1,6 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers;
 using SharpCR.Registry.Models.Manifests;
@@ -16,7 +15,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         public void GetManifest()
         {
             var repositoryName = "foo/abcd";
-            var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
+            var manifestBytes = Encoding.Default.GetBytes(TestUtilities.GetManifestResource("manifest.v2.json"));
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
@@ -39,7 +38,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         {
             const string repositoryName = "foo/abcd";
             const string tag = "v1.0.0";
-            var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
+            var manifestBytes = Encoding.Default.GetBytes(TestUtilities.GetManifestResource("manifest.v2.json"));
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
@@ -59,7 +58,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
         {
             const string repositoryName = "foo/abcd";
             const string tag = "v1.0.0";
-            var manifestBytes = Encoding.Default.GetBytes(getManifestResource("manifest.v2.json"));
+            var manifestBytes = Encoding.Default.GetBytes(TestUtilities.GetManifestResource("manifest.v2.json"));
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dataStore = new RecordStoreStub().WithBlobs(BuildBlobRecords(repositoryName, manifestBytes));
 
@@ -81,14 +80,6 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
         // todo: assert orphan blobs are deleted when deleting manifest while referenced blobs are kept.
         // todo: test more put cases
-
-        private static string getManifestResource(string name)
-        {
-            using var stream = typeof(ManifestControllerTests).Assembly.GetManifestResourceStream(
-                $"SharpCR.Registry.Tests.ControllerTests.{name}");
-            using var sr = new StreamReader(stream!);
-            return sr.ReadToEnd();
-        }
 
         private BlobRecord[] BuildBlobRecords(string repositoryName, byte[] manifestBytes)
         {

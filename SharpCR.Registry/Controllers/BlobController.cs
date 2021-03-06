@@ -136,28 +136,29 @@ namespace SharpCR.Registry.Controllers
             
             using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
             var computedDigest = Digest.Compute(fileReceived);
+            var computedDigestString = computedDigest.ToString();
             if (requestedDigest != null && !requestedDigest.Equals(computedDigest))
             {
                 blobTempFile.Delete();
                 return BadRequest();
             }
 
-            var digestString = computedDigest.ToString();
-            var savedLocation = _blobStorage.Save(repo, digestString, fileReceived);
+            fileReceived.Seek(0, SeekOrigin.Begin);
+            var savedLocation = _blobStorage.Save(repo, computedDigestString, fileReceived);
             fileReceived.Dispose();
             blobTempFile.Delete();
 
             var blobRecord = new BlobRecord
             {
                 RepositoryName = repo,
-                DigestString = digestString,
+                DigestString = computedDigestString,
                 StorageLocation = savedLocation,
                 ContentLength = blobTempFile.Length
             };
             _recordStore.CreateBlob(blobRecord);
             
-            Response.Headers.Add("Docker-Content-Digest", digestString);
-            return Created($"/v2/{repo}/blobs/{digestString}", null);
+            Response.Headers.Add("Docker-Content-Digest", computedDigestString);
+            return Created($"/v2/{repo}/blobs/{computedDigestString}", null);
         }
 
         private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, out IActionResult actionResult)

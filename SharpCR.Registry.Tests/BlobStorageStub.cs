@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace SharpCR.Registry.Tests
 {
@@ -35,6 +36,11 @@ namespace SharpCR.Registry.Tests
             var key = Guid.NewGuid().ToString();
             _blobs.Add(key, ms.ToArray());
             return key;
+        }
+
+        public List<byte[]> GetStoredBlobs()
+        {
+            return _blobs.Values.ToList();
         }
     }
 }
