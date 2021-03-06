@@ -20,7 +20,7 @@ namespace SharpCR.Features.LocalStorage
         private Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
         private Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
         private readonly ReaderWriterLock _locker = new ReaderWriterLock();
-        private static readonly TimeSpan LockerTimeout = TimeSpan.FromMilliseconds(50);
+        private static readonly TimeSpan LockerTimeout = TimeSpan.FromSeconds(3);
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {

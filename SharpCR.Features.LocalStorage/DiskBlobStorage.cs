@@ -33,7 +33,7 @@ namespace SharpCR.Features.LocalStorage
 
         public string Save(string repoName, string digest, Stream stream)
         {
-            var location = Path.Combine(repoName, digest.Replace('@', Path.DirectorySeparatorChar));
+            var location = Path.Combine(repoName, digest.Replace(':', Path.DirectorySeparatorChar));
             var savePath = MapPath(location);
             
             var directory = Path.GetDirectoryName(savePath);

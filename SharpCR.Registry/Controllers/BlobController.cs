@@ -63,10 +63,17 @@ namespace SharpCR.Registry.Controllers
             var sessionId = $"{_settings.BlobUploadSessionIdPrefix}_{Guid.NewGuid():N}";
             var singlePost = !string.IsNullOrEmpty(digest);
             var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
-            
-            return singlePost
-                ? FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)), chunkedEncoding) : 
-                Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
+
+            if (singlePost)
+            {
+                return FinishUploading(repo, digest, new FileInfo(TempPathForUploadingBlob(sessionId)),
+                    chunkedEncoding);
+            }
+            else
+            {
+                Response.Headers.Add("Docker-Upload-UUID", sessionId);
+                return Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
+            }
         }
 
         [RegistryRoute("blobs/uploads/{sessionId}")]
@@ -84,13 +91,14 @@ namespace SharpCR.Registry.Controllers
             var receivingChunks = string.Equals(Request.Method, HttpMethod.Patch.ToString(), StringComparison.OrdinalIgnoreCase);
             var chunkedEncoding = !Request.ContentLength.HasValue && Request.Headers["Transfer-Encoding"] == "chunked";
 
-            if (!chunkedEncoding && receivingChunks)
+            if (receivingChunks)
             {
-                return !SaveChunk(blobTempFile, false, out var exceptionalResult) 
+                Response.Headers.Add("Docker-Upload-UUID", sessionId);
+                return !SaveChunk(blobTempFile, chunkedEncoding,  false, out var exceptionalResult) 
                     ? exceptionalResult 
                     : Accepted($"/v2/{repo}/blobs/uploads/{sessionId}");
             }
-
+            
             return FinishUploading(repo, digest, blobTempFile, chunkedEncoding);
         }
 
@@ -106,14 +114,13 @@ namespace SharpCR.Registry.Controllers
 
             _recordStore.DeleteBlob(blob);
             _blobStorage.Delete(blob.StorageLocation);
-
             return Accepted();
         }
         
         
         private IActionResult FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding)
         {
-            if (!SaveChunk(blobTempFile, chunkedEncoding, out var exceptionalResult))
+            if (!SaveChunk(blobTempFile, chunkedEncoding, true, out var exceptionalResult))
             {
                 return exceptionalResult;
             }
@@ -148,22 +155,19 @@ namespace SharpCR.Registry.Controllers
                 ContentLength = blobTempFile.Length
             };
             _recordStore.CreateBlob(blobRecord);
+            
+            Response.Headers.Add("Docker-Content-Digest", digestString);
             return Created($"/v2/{repo}/blobs/{digestString}", null);
         }
 
-        private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, out IActionResult actionResult)
+        private bool SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, out IActionResult actionResult)
         {
             actionResult = null;
             var requestContentLength = Request.Headers.ContentLength;
-            if (!chunkedEncoding)
+            if (requestContentLength == 0)
             {
-                if (!requestContentLength.HasValue || requestContentLength <= 0)
-                {
-                    actionResult = BadRequest();
-                    return false;
-                }
+                return true;
             }
-            
 
             var existingLength = tempFile.Exists ? tempFile.Length : 0;
             if (!chunkedEncoding && !ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out actionResult))
@@ -177,8 +181,15 @@ namespace SharpCR.Registry.Controllers
             }
             using var receivedStream = tempFile.Exists ? tempFile.OpenWrite() : tempFile.Create();
             Request.Body.CopyTo(receivedStream);
+            
+            var updatedLength = receivedStream.Length;
+            var receivedLength = updatedLength - existingLength;
+            if (!closing && receivedLength > 0)
+            {
+                Response.Headers.Add("Range", $"{existingLength}-{updatedLength-1}");
+            }
 
-            if (!chunkedEncoding && requestContentLength != (new FileInfo(tempFile.FullName).Length - existingLength))
+            if (!chunkedEncoding && requestContentLength != receivedLength)
             {
                 receivedStream.Dispose();
                 tempFile.Delete();
@@ -196,7 +207,7 @@ namespace SharpCR.Registry.Controllers
                 return true;
             }
                 
-            var regex = new Regex(@"^bytes\s([\d]+)-([\d]+)(/.*)?$", RegexOptions.Compiled);
+            var regex = new Regex(@"^(bytes\s)?([\d]+)-([\d]+)(/.*)?$", RegexOptions.Compiled);
             var rangeMatch = regex.Match(requestContentRange);
             if (!rangeMatch.Success)
             {
@@ -204,10 +215,11 @@ namespace SharpCR.Registry.Controllers
                 return false;
             }
 
-            var rangeStart = long.Parse(rangeMatch.Groups[1].Value);
-            var rangeEnd = long.Parse(rangeMatch.Groups[2].Value);
+            var rangeStart = long.Parse(rangeMatch.Groups[2].Value);
+            var rangeEnd = long.Parse(rangeMatch.Groups[3].Value);
             if (rangeStart != existingLength || requestContentLength != (rangeEnd - rangeStart + 1))
             {
+                Response.Headers.Add("Range", $"0-{existingLength-1}");
                 actionResult = new StatusCodeResult((int) HttpStatusCode.RequestedRangeNotSatisfiable);
                 return false;
             }
