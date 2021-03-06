@@ -13,7 +13,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         [Fact]
         public void ShouldStore()
         {
-            var basePath = Path.GetTempPath();
+            var basePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
             var recordsFile = Path.Combine(basePath, "records.json");
             if (File.Exists(recordsFile))
             {
@@ -37,7 +37,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         [Fact]
         public void ShouldGet()
         {
-            var store = CreateRecordStore(Path.GetTempPath());
+            var store = CreateRecordStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
             var digestString = "sha256:" + Guid.NewGuid().ToString("N");
             var repositoryName = "library/abcd";
 
@@ -55,7 +55,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
 
         private static DiskRecordStore CreateRecordStore(string path)
         {
-            var context = FeatureEntryFacts.CreateTestSetupContext();
+            var context = TestUtilities.CreateTestSetupContext();
             return new DiskRecordStore(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = path}));
         }
     }

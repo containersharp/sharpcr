@@ -187,6 +187,11 @@ namespace SharpCR.Features.LocalStorage
                     };
 
                     var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
+                    if (!Directory.Exists(_config.BasePath))
+                    {
+                        Directory.CreateDirectory(_config.BasePath);
+                    }
+                    
                     using var fs = File.OpenWrite(dataFile);
                     using var utf8JsonWriter = new Utf8JsonWriter(fs);
                     JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});

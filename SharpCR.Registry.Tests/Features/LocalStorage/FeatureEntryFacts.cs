@@ -35,7 +35,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var services = new ServiceCollection();
 
             var featureObject = CreateFeatureInstance(_featureType);
-            featureObject.ConfigureServices(services, CreateTestSetupContext());
+            featureObject.ConfigureServices(services, TestUtilities.CreateTestSetupContext());
             
             Assert.NotNull(featureObject);
             Assert.NotNull(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskRecordStore)));
@@ -49,41 +49,9 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var services = new ServiceCollection().BuildServiceProvider();
 
             var featureObject = CreateFeatureInstance(_featureType);
-            featureObject.ConfigureWebAppPipeline(new ApplicationBuilder(services), services, CreateTestSetupContext());
+            featureObject.ConfigureWebAppPipeline(new ApplicationBuilder(services), services, TestUtilities.CreateTestSetupContext());
             
             Assert.NotNull(featureObject);
-        }
-
-        public static StartupContext CreateTestSetupContext()
-        {
-            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>()).Build();
-            var basePath = AppDomain.CurrentDomain.BaseDirectory;
-            var fileProvider = new PhysicalFileProvider(basePath);
-            var hostEnv = new TestWebEnvironment()
-            {
-                EnvironmentName = "Development",
-                ApplicationName = "SharpCR",
-                ContentRootPath = basePath,
-                WebRootPath = basePath,
-                ContentRootFileProvider = fileProvider,
-                WebRootFileProvider = fileProvider
-            };
-            
-            return new StartupContext()
-            {
-                HostEnvironment = hostEnv,
-                Configuration = configuration
-            };
-        }
-
-        class TestWebEnvironment: IWebHostEnvironment
-        {
-            public string EnvironmentName { get; set; }
-            public string ApplicationName { get; set; }
-            public string ContentRootPath { get; set; }
-            public IFileProvider ContentRootFileProvider { get; set; }
-            public IFileProvider WebRootFileProvider { get; set; }
-            public string WebRootPath { get; set; }
         }
     }
 }

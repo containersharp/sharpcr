@@ -61,7 +61,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
                 Directory.Delete(blobsPath, true);
             }
 
-            var context = FeatureEntryFacts.CreateTestSetupContext();
+            var context = TestUtilities.CreateTestSetupContext();
             return new DiskBlobStorage(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = basePath}));
         }
     }
