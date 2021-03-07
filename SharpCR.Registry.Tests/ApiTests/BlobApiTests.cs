@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 using Xunit;
 
@@ -25,7 +26,7 @@ namespace SharpCR.Registry.Tests.ApiTests
                     RepositoryName = RepositoryName,
                     DigestString = DigestString,
                     ContentLength = blobStream.Length,
-                    MediaType = "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                    MediaType = WellKnownMediaTypes.DockerImageLayerTarGzipped,
                     StorageLocation = stubBlobStorage.SaveAsync(RepositoryName, DigestString, blobStream).Result
                 },
                 new BlobRecord
@@ -51,7 +52,7 @@ namespace SharpCR.Registry.Tests.ApiTests
             
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal(893, response.Content.Headers.ContentLength);
-            Assert.Equal("application/vnd.docker.image.rootfs.diff.tar.gzip", response.Content.Headers.ContentType.ToString());
+            Assert.Equal(WellKnownMediaTypes.DockerImageLayerTarGzipped, response.Content.Headers.ContentType.ToString());
             Assert.Equal(TestUtilities.GetManifestResource("manifest.v2.json"), content);
         }
         
