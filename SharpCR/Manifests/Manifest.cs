@@ -5,7 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace SharpCR.Registry.Models.Manifests
+namespace SharpCR.Manifests
 {
     /// <summary>
     /// Represent a container manifest

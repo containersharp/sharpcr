@@ -7,6 +7,7 @@ namespace SharpCR.Registry
     {
 
         Task<Stream> ReadAsync(string location);
+        Task<bool> ExistAsync(string location);
         Task DeleteAsync(string location);
         Task<string> SaveAsync(string repoName, string digest, Stream stream);
 

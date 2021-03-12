@@ -1,4 +1,4 @@
-namespace SharpCR.Registry.Models.Manifests
+namespace SharpCR.Manifests
 {
     public interface IManifestParser
     {

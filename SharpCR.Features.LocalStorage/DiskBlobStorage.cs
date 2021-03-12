@@ -23,6 +23,12 @@ namespace SharpCR.Features.LocalStorage
             return Task.FromResult(File.Exists(path) ? File.OpenRead(path) : (Stream)null);
         }
 
+        public Task<bool> ExistAsync(string location)
+        {
+            var actualPath = MapPath(location);
+            return Task.FromResult(File.Exists(actualPath));
+        }
+
         public Task DeleteAsync(string location)
         {
             var path = MapPath(location);

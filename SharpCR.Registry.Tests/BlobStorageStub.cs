@@ -16,6 +16,11 @@ namespace SharpCR.Registry.Tests
             return Task.FromResult(_blobs.ContainsKey(location) ? new MemoryStream(_blobs[location]) : (Stream)null);
         }
 
+        public Task<bool> ExistAsync(string location)
+        {
+            return Task.FromResult(_blobs.ContainsKey(location));
+        }
+
         public Task DeleteAsync(string location)
         {
             if(_blobs.ContainsKey(location))

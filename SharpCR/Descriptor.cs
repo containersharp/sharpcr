@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SharpCR.Registry.Models
+namespace SharpCR
 {
     public class Descriptor
     {

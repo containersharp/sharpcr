@@ -4,7 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace SharpCR.Registry.Models.Manifests
+namespace SharpCR.Manifests
 {
     /// <summary>
     /// Represents a legacy version of Docker image manifest
@@ -72,14 +72,14 @@ namespace SharpCR.Registry.Models.Manifests
             {
               var layerObj = (JObject)(layersArray[index]);
               var blobSum = (string) (layerObj.Property("blobSum"));
-              Models.Digest.TryParse(blobSum, out _);
+              SharpCR.Digest.TryParse(blobSum, out _);
               layers[index] = new Descriptor { MediaType  = WellKnownMediaTypes.DockerImageLayerXGTar, Digest = blobSum};
             }
 
             manifest.Layers = layers;
           }
 
-          manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
+          manifest.Digest = SharpCR.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
           return manifest;
         }
       }

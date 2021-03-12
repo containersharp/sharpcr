@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace SharpCR.Registry.Models.Manifests
+namespace SharpCR.Manifests
 {
     /// <summary>
     /// Represent an image manifest.
@@ -47,7 +47,7 @@ namespace SharpCR.Registry.Models.Manifests
                 // Tag could be included in annotation `org.opencontainers.image.ref.name`
                 // https://github.com/opencontainers/image-spec/blob/master/image-layout.md
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
+                manifest.Digest = SharpCR.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
                 return manifest;
             }
 

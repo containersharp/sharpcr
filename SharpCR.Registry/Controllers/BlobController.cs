@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using SharpCR.Registry.Models;
 using SharpCR.Registry.Records;
 
 namespace SharpCR.Registry.Controllers

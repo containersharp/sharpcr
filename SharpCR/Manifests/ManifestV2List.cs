@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace SharpCR.Registry.Models.Manifests
+namespace SharpCR.Manifests
 {
     /// <summary>
     /// Represent a manifest-list-type of manifest. That is also an OCI image index.
@@ -36,14 +36,14 @@ namespace SharpCR.Registry.Models.Manifests
             public Manifest Parse(byte[] jsonBytes)
             {
                 var manifest = JsonConvert.DeserializeObject<ManifestV2List>(Encoding.UTF8.GetString(jsonBytes));
-                if (manifest.SchemaVersion != 2 || manifest.MediaType != GetAcceptableMediaTypes().Single())
+                if (manifest.SchemaVersion != 2 || !GetAcceptableMediaTypes().Contains(manifest.MediaType))
                 {
                     throw new NotSupportedException(
                         "Only version 2 schema version manifest lists are supported by this parser.");
                 }
 
                 manifest.RawJsonBytes = jsonBytes;
-                manifest.Digest = Models.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
+                manifest.Digest = SharpCR.Digest.Compute( manifest.GetJsonBytesForComputingDigest() ).ToString();
                 return manifest;
             }
 

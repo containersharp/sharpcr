@@ -2,8 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using SharpCR.Registry.Models;
 
-namespace SharpCR.Registry.Models
+namespace SharpCR
 {
    public sealed class Digest
   {
@@ -81,6 +82,7 @@ namespace SharpCR.Registry.Models
     {
       // ReSharper disable InconsistentNaming
       SHA256,
+      SHA384,
       SHA512
     }
 

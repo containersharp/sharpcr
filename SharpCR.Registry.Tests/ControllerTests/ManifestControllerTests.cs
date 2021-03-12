@@ -3,8 +3,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using SharpCR.Manifests;
 using SharpCR.Registry.Controllers;
-using SharpCR.Registry.Models.Manifests;
 using SharpCR.Registry.Records;
 using Xunit;
 
