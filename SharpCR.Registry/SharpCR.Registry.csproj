@@ -2,11 +2,28 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <VersionPrefix>1.0.1</VersionPrefix>
+  </PropertyGroup>
+  
   <ItemGroup>
-    <ProjectReference Include="..\SharpCR\SharpCR.csproj" />
+    <Content Include="appsettings.json">
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="appsettings.Development.json">
+      <Pack>false</Pack>
+    </Content>
+    <Content Include="$(OutputPath)\SharpCR.Features.LocalStorage.dll">
+      <BuildAction>None</BuildAction>
+      <PackagePath>lib\$(TargetFramework)\</PackagePath>
+    </Content>
   </ItemGroup>
-
-
+  
+  <ItemGroup>
+    <PackageReference Include="SharpCR" Version="1.0.0" />
+  </ItemGroup>
 </Project>
