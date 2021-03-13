@@ -9,37 +9,38 @@ namespace SharpCR.Features.LocalStorage
     public class DiskBlobStorage : IBlobStorage
     {
         private readonly string _storageBasePath;
+        private readonly FileIndexer _blobIndexer;
 
         public DiskBlobStorage(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
             var config = configuredOptions.Value;
             var contentRoot = config.BasePath ?? environment.ContentRootPath;
             _storageBasePath = Path.Combine(contentRoot, config.BlobsDirectoryName);
+            _blobIndexer = new FileIndexer(Path.Combine(_storageBasePath, "index.txt"));
         }
-        
+
+        public async Task<string> TryLocateExistingAsync(string digest)
+        {
+            return await _blobIndexer.TryGetLocation(digest);
+        }
+
         public Task<Stream> ReadAsync(string location)
         {
             var path = MapPath(location);
             return Task.FromResult(File.Exists(path) ? File.OpenRead(path) : (Stream)null);
         }
 
-        public Task<bool> ExistAsync(string location)
-        {
-            var actualPath = MapPath(location);
-            return Task.FromResult(File.Exists(actualPath));
-        }
-
-        public Task DeleteAsync(string location)
+        public async Task DeleteAsync(string location)
         {
             var path = MapPath(location);
             if (File.Exists(path))
             {
                 File.Delete(path);
+                await _blobIndexer.RemoveAsync(location);
             }
-            return Task.CompletedTask;
         }
 
-        public async Task<string> SaveAsync(string repoName, string digest, Stream stream)
+        public async Task<string> SaveAsync(string digest, Stream stream, string repoName)
         {
             var location = Path.Combine(repoName, digest.Replace(':', Path.DirectorySeparatorChar));
             var savePath = MapPath(location);
@@ -58,7 +59,9 @@ namespace SharpCR.Features.LocalStorage
             await using var outputStream = File.Create(savePath);
             await stream.CopyToAsync(outputStream);
             
-            return savePath.Substring(_storageBasePath.Length).Trim(Path.DirectorySeparatorChar);
+            var saveLocation = savePath.Substring(_storageBasePath.Length).Trim(Path.DirectorySeparatorChar);
+            await _blobIndexer.AddAsync(digest, saveLocation);
+            return saveLocation;
         }
 
         public bool SupportsDownloading { get; } = false;
@@ -75,6 +78,89 @@ namespace SharpCR.Features.LocalStorage
                     .Trim(Path.DirectorySeparatorChar);
             
             return Path.Combine(_storageBasePath, canonicalSubPath);
+        }
+
+        public class FileIndexer
+        {
+            private readonly string _indexFilePath;
+            const string Splitter = "$";
+
+            public FileIndexer(string indexFilePath)
+            {
+                _indexFilePath = indexFilePath;
+                var dir = Path.GetDirectoryName(indexFilePath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                if (!File.Exists(dir))
+                {
+                    File.Create(indexFilePath);
+                }
+            }
+            public async Task AddAsync(string digest, string location)
+            {
+                await using var fs = File.OpenWrite(_indexFilePath);
+                await using var writer = new StreamWriter(fs);
+                await writer.WriteLineAsync($"{digest}{Splitter}{location}");
+            }
+
+            public async Task RemoveAsync(string location)
+            {
+                var lineSuffix = $"{Splitter}{location}";
+                var newIndexFile = _indexFilePath + ".tmp";
+                
+                await using var fs = File.OpenRead(_indexFilePath);
+                await using var fsOut = File.OpenWrite(newIndexFile);
+                
+                using var reader = new StreamReader(fs);
+                await using var writer = new StreamWriter(fsOut);
+                while (true)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (line == null)
+                    {
+                        break;
+                    }
+
+                    if (!line.EndsWith(lineSuffix))
+                    {
+                        await writer.WriteLineAsync(line); 
+                    }
+                    else
+                    {
+                        await fs.CopyToAsync(fsOut);
+                        break;
+                    }
+                }
+                
+                File.Move(newIndexFile, _indexFilePath);
+            }
+
+            public async Task<string> TryGetLocation(string digest)
+            {
+                var linePrefix = $"{digest}{Splitter}";
+                
+                await using var fs = File.OpenRead(_indexFilePath);
+                using var reader = new StreamReader(fs);
+                while (true)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (line == null)
+                    {
+                        break;
+                    }
+
+                    if (line.StartsWith(linePrefix))
+                    {
+                        return line.Substring(linePrefix.Length);
+                    }
+                }
+
+                return null;
+            }
+            
+            // todo: test this indexer
         }
     }
 }

@@ -28,7 +28,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
                 {
                     RepositoryName = repositoryName,
                     DigestString = digest, ContentLength = blobStream.Length,
-                    StorageLocation = await blobStorage.SaveAsync(repositoryName, digest, blobStream)
+                    StorageLocation = await blobStorage.SaveAsync(digest, blobStream, repositoryName)
                 });
 
             var controller = CreateController(dataStore, blobStorage);
@@ -51,7 +51,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var blobStream = new MemoryStream(Encoding.Default.GetBytes("blob binary"));
             var blobStorage = new BlobStorageStub();
-            var blobLocation = await blobStorage.SaveAsync(repositoryName, digest, blobStream);
+            var blobLocation = await blobStorage.SaveAsync(digest, blobStream, repositoryName);
 
             var blobRecord = new BlobRecord {RepositoryName = repositoryName, DigestString = digest, ContentLength = blobStream.Length, StorageLocation = blobLocation};
             var dataStore = new RecordStoreStub().WithBlobs(blobRecord);

@@ -149,7 +149,8 @@ namespace SharpCR.Registry.Controllers
             }
 
             fileReceived.Seek(0, SeekOrigin.Begin);
-            var savedLocation = await _blobStorage.SaveAsync(repo, computedDigestString, fileReceived);
+            var existingLocation = await _blobStorage.TryLocateExistingAsync(computedDigestString);
+            var savedLocation = existingLocation ?? (await _blobStorage.SaveAsync(computedDigestString, fileReceived, repo));
             await fileReceived.DisposeAsync();
             blobTempFile.Delete();
 

@@ -11,14 +11,15 @@ namespace SharpCR.Registry.Tests
         private readonly Dictionary<string, byte[]> _blobs = new Dictionary<string, byte[]>();
 
 
+        public Task<string> TryLocateExistingAsync(string digest)
+        {
+            var location = _blobs.ContainsKey(digest) ? digest : null;
+            return Task.FromResult(location);
+        }
+
         public Task<Stream> ReadAsync(string location)
         {
             return Task.FromResult(_blobs.ContainsKey(location) ? new MemoryStream(_blobs[location]) : (Stream)null);
-        }
-
-        public Task<bool> ExistAsync(string location)
-        {
-            return Task.FromResult(_blobs.ContainsKey(location));
         }
 
         public Task DeleteAsync(string location)
@@ -37,14 +38,13 @@ namespace SharpCR.Registry.Tests
             throw new System.NotImplementedException();
         }
 
-        public Task<string> SaveAsync(string repoName, string digest, Stream stream)
+        public Task<string> SaveAsync(string digest, Stream stream, string repoName)
         {
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
-            
-            var key = Guid.NewGuid().ToString();
-            _blobs.Add(key, ms.ToArray());
-            return Task.FromResult(key);
+
+            _blobs.Add(digest, ms.ToArray());
+            return Task.FromResult(digest);
         }
 
         public List<byte[]> GetStoredBlobs()

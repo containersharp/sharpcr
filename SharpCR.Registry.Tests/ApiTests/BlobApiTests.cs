@@ -27,7 +27,7 @@ namespace SharpCR.Registry.Tests.ApiTests
                     DigestString = DigestString,
                     ContentLength = blobStream.Length,
                     MediaType = WellKnownMediaTypes.DockerImageLayerTarGzipped,
-                    StorageLocation = stubBlobStorage.SaveAsync(RepositoryName, DigestString, blobStream).Result
+                    StorageLocation = stubBlobStorage.SaveAsync(DigestString, blobStream, RepositoryName).Result
                 },
                 new BlobRecord
                 {

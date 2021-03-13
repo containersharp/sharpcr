@@ -19,7 +19,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
             await using var ms = new MemoryStream(bytes);
-            var location = await storage.SaveAsync("abc/foo", "sha256@ab123de", ms);
+            var location = await storage.SaveAsync("sha256@ab123de", ms, "abc/foo");
 
             var actualPath = Path.Combine(blobsPath, location);
             Assert.True(File.Exists(actualPath));
@@ -33,7 +33,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
             await using var ms = new MemoryStream(bytes);
-            var location = await storage.SaveAsync("abc/foo", "sha256@ab123de", ms);
+            var location = await storage.SaveAsync("sha256@ab123de", ms, "abc/foo");
 
             await using var readResult = await storage.ReadAsync(location);
             await using var readMs = new MemoryStream();
