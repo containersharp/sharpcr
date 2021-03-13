@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Registry.Controllers.ResponseModels;
-using SharpCR.Registry.Models;
 
 namespace SharpCR.Registry.Controllers
 {

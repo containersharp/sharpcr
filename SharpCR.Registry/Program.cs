@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace SharpCR.Registry
@@ -14,11 +15,7 @@ namespace SharpCR.Registry
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>()
-                        .UseKestrel(op =>
-                        {
-                            op.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // 1GB
-                        });
+                    webBuilder.UseStartup<Startup>();
                 });
     }
 }
