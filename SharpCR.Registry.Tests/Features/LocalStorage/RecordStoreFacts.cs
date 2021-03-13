@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using SharpCR.Features.LocalStorage;
-using SharpCR.Registry.Records;
+using SharpCR.Features.Records;
 using Xunit;
 
 namespace SharpCR.Registry.Tests.Features.LocalStorage

@@ -3,9 +3,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using SharpCR.Features.Records;
 using SharpCR.Manifests;
 using SharpCR.Registry.Controllers;
-using SharpCR.Registry.Records;
 using Xunit;
 
 namespace SharpCR.Registry.Tests.ControllerTests

@@ -4,8 +4,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using SharpCR.Registry.Models;
-using SharpCR.Registry.Records;
+using SharpCR.Features;
+using SharpCR.Features.Records;
 using Xunit;
 
 namespace SharpCR.Registry.Tests.ApiTests

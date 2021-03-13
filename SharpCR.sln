@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpCR.Features.LocalStora
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpCR", "SharpCR\SharpCR.csproj", "{2A13A164-A48A-412C-B7F0-A1BD30762873}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpCR.Features", "SharpCR.Features\SharpCR.Features.csproj", "{8849601B-53A8-496E-8B51-98BF345E7E5E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,5 +74,17 @@ Global
 		{2A13A164-A48A-412C-B7F0-A1BD30762873}.Release|x64.Build.0 = Release|Any CPU
 		{2A13A164-A48A-412C-B7F0-A1BD30762873}.Release|x86.ActiveCfg = Release|Any CPU
 		{2A13A164-A48A-412C-B7F0-A1BD30762873}.Release|x86.Build.0 = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|x64.Build.0 = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Debug|x86.Build.0 = Debug|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|x64.ActiveCfg = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|x64.Build.0 = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|x86.ActiveCfg = Release|Any CPU
+		{8849601B-53A8-496E-8B51-98BF345E7E5E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

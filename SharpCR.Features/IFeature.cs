@@ -2,7 +2,7 @@ using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace SharpCR.Registry.Features
+namespace SharpCR.Features
 {
     public interface IFeature
     {

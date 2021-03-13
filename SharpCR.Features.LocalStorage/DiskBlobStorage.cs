@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
-using SharpCR.Registry;
 
 namespace SharpCR.Features.LocalStorage
 {

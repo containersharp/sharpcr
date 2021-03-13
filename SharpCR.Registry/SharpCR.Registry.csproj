@@ -25,5 +25,6 @@
   
   <ItemGroup>
     <PackageReference Include="SharpCR" Version="1.0.0" />
+    <PackageReference Include="SharpCR.Features" Version="1.0.1" />
   </ItemGroup>
 </Project>

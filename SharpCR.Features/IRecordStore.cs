@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Threading.Tasks;
-using SharpCR.Registry.Records;
+using SharpCR.Features.Records;
 
-namespace SharpCR.Registry
+namespace SharpCR.Features
 {
     public interface IRecordStore
     {

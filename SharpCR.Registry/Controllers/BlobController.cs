@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using SharpCR.Registry.Records;
+using SharpCR.Features;
+using SharpCR.Features.Records;
 
 namespace SharpCR.Registry.Controllers
 {

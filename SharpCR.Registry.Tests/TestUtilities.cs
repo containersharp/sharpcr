@@ -4,6 +4,7 @@ using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
+using SharpCR.Features;
 using SharpCR.Registry.Features;
 using SharpCR.Registry.Tests.ControllerTests;
 

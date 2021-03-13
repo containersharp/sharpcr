@@ -6,8 +6,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using SharpCR.Features;
+using SharpCR.Features.Records;
 using SharpCR.Manifests;
-using SharpCR.Registry.Records;
 
 
 namespace SharpCR.Registry.Controllers

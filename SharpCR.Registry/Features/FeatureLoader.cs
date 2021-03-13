@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using SharpCR.Features;
 
 namespace SharpCR.Registry.Features
 {
@@ -32,7 +33,7 @@ namespace SharpCR.Registry.Features
             var dlls = Directory.GetFiles(baseDir, "*.dll")
                 .Where(dll => Path.GetFileName(dll).StartsWith(featurePrefix))
                 .Select(dll => Path.GetFileNameWithoutExtension(dll).Substring(featurePrefix.Length))
-                .Where(feature => !toggles.TryGetValue(feature, out var enabled) || enabled)
+                .Where(feature => feature.Length > 0 && (!toggles.TryGetValue(feature, out var enabled) || enabled))
                 .ToArray();
 
             var featureInterfaceType = typeof(IFeature);

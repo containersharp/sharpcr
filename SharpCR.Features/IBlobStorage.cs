@@ -1,7 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-namespace SharpCR.Registry
+namespace SharpCR.Features
 {
     public interface IBlobStorage
     {

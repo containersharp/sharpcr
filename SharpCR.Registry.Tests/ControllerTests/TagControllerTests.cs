@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
+using SharpCR.Features.Records;
 using SharpCR.Registry.Controllers;
-using SharpCR.Registry.Records;
 using Xunit;
 
 namespace SharpCR.Registry.Tests.ControllerTests

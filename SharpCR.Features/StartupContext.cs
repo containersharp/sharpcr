@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 
 [assembly: InternalsVisibleTo("SharpCR.Registry.Tests")]
-namespace SharpCR.Registry.Features
+[assembly: InternalsVisibleTo("SharpCR.Registry")]
+namespace SharpCR.Features
 {
     public class StartupContext
     {

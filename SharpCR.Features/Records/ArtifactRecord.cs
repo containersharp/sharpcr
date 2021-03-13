@@ -1,4 +1,4 @@
-namespace SharpCR.Registry.Records
+namespace SharpCR.Features.Records
 {
     public class ArtifactRecord
     {

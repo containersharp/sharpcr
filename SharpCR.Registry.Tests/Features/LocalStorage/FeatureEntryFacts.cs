@@ -2,12 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
+using SharpCR.Features;
 using SharpCR.Features.LocalStorage;
-using SharpCR.Registry.Features;
 using Xunit;
 
 namespace SharpCR.Registry.Tests.Features.LocalStorage
