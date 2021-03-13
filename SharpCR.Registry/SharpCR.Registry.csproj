@@ -11,12 +11,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <Content Include="appsettings.json">
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="appsettings.Development.json">
-      <Pack>false</Pack>
-    </Content>
     <Content Include="$(OutputPath)\SharpCR.Features.LocalStorage.dll">
       <BuildAction>None</BuildAction>
       <PackagePath>lib\$(TargetFramework)\</PackagePath>
@@ -27,4 +21,16 @@
     <PackageReference Include="SharpCR" Version="1.0.0" />
     <PackageReference Include="SharpCR.Features" Version="1.0.1" />
   </ItemGroup>
+
+
+  <Target Name="PublishFeatures" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <FeatureFiles Include="$(OutputPath)\SharpCR.Features.*.dll" />
+      <ResolvedFileToPublish Include="@(FeatureFiles)" Exclude="@(ResolvedFileToPublish)" Condition="'@(FeatureFiles)' != ''">
+        <RelativePath>$([System.IO.Path]::GetFileName(%(FeatureFiles.Identity)))</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
