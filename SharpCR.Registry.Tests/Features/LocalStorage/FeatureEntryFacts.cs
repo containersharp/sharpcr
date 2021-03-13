@@ -42,6 +42,23 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             Assert.NotNull(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskBlobStorage)));
         }
         
+        [Fact]
+        public void ShouldNotConfigureBlobStorageWhenDisabled()
+        {
+            var disabledStorage = new Dictionary<string, string>()
+            {
+                {"Features:LocalStorage:BlobStorageEnabled", "false"}
+            };
+            var services = new ServiceCollection();
+
+            var featureObject = CreateFeatureInstance(_featureType);
+            featureObject.ConfigureServices(services, TestUtilities.CreateTestSetupContext(disabledStorage));
+            
+            Assert.NotNull(featureObject);
+            Assert.NotNull(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskRecordStore)));
+            Assert.Null(services.FirstOrDefault(s => s.ImplementationType == typeof(DiskBlobStorage)));
+        }
+        
         
         [Fact]
         public void ShouldConfigureAppPipeline()

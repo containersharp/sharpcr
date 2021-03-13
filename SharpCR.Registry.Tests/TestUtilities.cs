@@ -11,9 +11,9 @@ namespace SharpCR.Registry.Tests
 {
     public class TestUtilities
     {
-        public static StartupContext CreateTestSetupContext()
+        public static StartupContext CreateTestSetupContext(Dictionary<string, string> configValues = null)
         {
-            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>()).Build();
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(configValues ?? new Dictionary<string, string>()).Build();
             var basePath = AppDomain.CurrentDomain.BaseDirectory;
             var fileProvider = new PhysicalFileProvider(basePath);
             var hostEnv = new TestWebEnvironment()
