@@ -93,9 +93,9 @@ namespace SharpCR.Features.LocalStorage
                 {
                     Directory.CreateDirectory(dir);
                 }
-                if (!File.Exists(dir))
+                if (!File.Exists(indexFilePath))
                 {
-                    File.Create(indexFilePath);
+                    File.Create(indexFilePath).Dispose();
                 }
             }
             public async Task AddAsync(string digest, string location)
@@ -109,12 +109,12 @@ namespace SharpCR.Features.LocalStorage
             {
                 var lineSuffix = $"{Splitter}{location}";
                 var newIndexFile = _indexFilePath + ".tmp";
-                
-                await using var fs = File.OpenRead(_indexFilePath);
-                await using var fsOut = File.OpenWrite(newIndexFile);
-                
+
+                var fs = File.OpenRead(_indexFilePath);
+                var fsOut = File.OpenWrite(newIndexFile);
+
                 using var reader = new StreamReader(fs);
-                await using var writer = new StreamWriter(fsOut);
+                using var writer = new StreamWriter(fsOut);
                 while (true)
                 {
                     var line = await reader.ReadLineAsync();
@@ -125,16 +125,20 @@ namespace SharpCR.Features.LocalStorage
 
                     if (!line.EndsWith(lineSuffix))
                     {
-                        await writer.WriteLineAsync(line); 
+                        await writer.WriteLineAsync(line);
                     }
                     else
                     {
+                        await writer.FlushAsync();
                         await fs.CopyToAsync(fsOut);
                         break;
                     }
                 }
-                
-                File.Move(newIndexFile, _indexFilePath);
+
+                await writer.DisposeAsync();
+                await fsOut.DisposeAsync();
+                await fs.DisposeAsync();
+                File.Move(newIndexFile, _indexFilePath, true);
             }
 
             public async Task<string> TryGetLocation(string digest)

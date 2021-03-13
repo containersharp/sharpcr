@@ -18,22 +18,20 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var storage = CreateBlobStorage(out var blobsPath);
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            await using var ms = new MemoryStream(bytes);
-            var location = await storage.SaveAsync("sha256@ab123de", ms, "abc/foo");
+            var location = await SaveByStorage(bytes, storage);
 
             var actualPath = Path.Combine(blobsPath, location);
             Assert.True(File.Exists(actualPath));
             Assert.True((await File.ReadAllBytesAsync(actualPath)).SequenceEqual(bytes));
         }
-        
+
         [Fact]
         public async Task ShouldReadByLocation()
         {
             var storage = CreateBlobStorage(out _);
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            await using var ms = new MemoryStream(bytes);
-            var location = await storage.SaveAsync("sha256@ab123de", ms, "abc/foo");
+            var location = await SaveByStorage(bytes, storage);
 
             await using var readResult = await storage.ReadAsync(location);
             await using var readMs = new MemoryStream();
@@ -53,13 +51,69 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             Assert.Throws<NotImplementedException>(() => { storage.GenerateDownloadUrlAsync("some-location");});
         }
         
-        
-        private static DiskBlobStorage CreateBlobStorage(out string blobsPath)
+        [Fact]
+        public async Task ShouldLocateExistingBlobs()
         {
-            var basePath = Path.GetTempPath();
+            var storage = CreateBlobStorage(out var blobPath);
+            var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
+            await using var ms = new MemoryStream(bytes);
+            
+            var digest = "sha256:ab123de";
+            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+            var located = await storage.TryLocateExistingAsync(digest);
+            
+            Assert.Equal(location, located);
+        }
+        
+        
+        [Fact]
+        public async Task ShouldIndexBlobs()
+        {
+            var storage = CreateBlobStorage(out var blobPath);
+            var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
+            await using var ms = new MemoryStream(bytes);
+            
+            var digest = "sha256:ab123de";
+            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+
+            var indexPath = Path.Combine(blobPath, "index.txt");
+            var indexContent = await File.ReadAllTextAsync(indexPath);
+            Assert.Contains(location, indexContent);
+            Assert.Contains(digest, indexContent);
+        }
+
+        [Fact]
+        public async Task ShouldRemoveFromIndexWhenDeleteBlob()
+        {
+            var storage = CreateBlobStorage(out var blobPath);
+            var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
+            await using var ms = new MemoryStream(bytes);
+
+            var digest = "sha256:ab123de";
+            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+            await storage.DeleteAsync(location);
+            
+            var indexPath = Path.Combine(blobPath, "index.txt");
+            var indexContent = await File.ReadAllTextAsync(indexPath);
+            Assert.DoesNotContain(location, indexContent);
+            Assert.DoesNotContain(digest, indexContent);
+        }
+
+
+        static DiskBlobStorage CreateBlobStorage(out string blobsPath)
+        {
+            var basePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
             blobsPath = Path.Combine(basePath, "blobs");
             var context = TestUtilities.CreateTestSetupContext();
             return new DiskBlobStorage(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = basePath}));
         }
+        
+        
+        static async Task<string> SaveByStorage(byte[] bytes, DiskBlobStorage storage)
+        {
+            await using var ms = new MemoryStream(bytes);
+            return await storage.SaveAsync("sha256:ab123de", ms, "abc/foo");
+        }
+
     }
 }
