@@ -79,6 +79,10 @@ namespace SharpCR.Registry.FeatureLoading
                 // todo print to logger
                 Console.WriteLine($"Error loading feature assembly {assemblyPath} with error:");
                 Console.WriteLine(ex);
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine(ex.InnerException);    
+                }
             }
 
             return null;
