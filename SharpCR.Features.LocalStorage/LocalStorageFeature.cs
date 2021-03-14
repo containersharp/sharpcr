@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SharpCR.Registry;
 
 namespace SharpCR.Features.LocalStorage
@@ -11,7 +12,8 @@ namespace SharpCR.Features.LocalStorage
         public void ConfigureServices(IServiceCollection services, StartupContext context)
         {
             var configuration = context.Configuration.GetSection("Features:LocalStorage")?.Get<LocalStorageConfiguration>() ?? new LocalStorageConfiguration();
-
+            
+            services.AddSingleton(Options.Create(configuration));
             if (configuration.RecordStoreEnabled == true)
             {
                 services.AddSingleton<IRecordStore, DiskRecordStore>();
