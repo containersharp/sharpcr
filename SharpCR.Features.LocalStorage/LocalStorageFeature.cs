@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCR.Registry;
-using SharpCR.Registry.Features;
 
 namespace SharpCR.Features.LocalStorage
 {

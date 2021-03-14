@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SharpCR.Features;
-using SharpCR.Registry.Features;
+using SharpCR.Registry.FeatureLoading;
 
 namespace SharpCR.Registry
 {

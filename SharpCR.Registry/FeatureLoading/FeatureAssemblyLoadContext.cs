@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace SharpCR.Registry.Features
+namespace SharpCR.Registry.FeatureLoading
 {
     public class FeatureAssemblyLoadContext: AssemblyLoadContext
     {
