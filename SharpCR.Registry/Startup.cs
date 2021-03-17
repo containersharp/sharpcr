@@ -41,16 +41,14 @@ namespace SharpCR.Registry
             {
                 app.UseDeveloperExceptionPage();
             }
-
             app.UseHttpsRedirection();
-
             app.UseRouting();
-            app.UseAuthorization();
+            
+            _loadedFeatures.ForEach(feature => feature.ConfigureWebAppPipeline(app, services,  _context));
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
             });
-            _loadedFeatures.ForEach(feature => feature.ConfigureWebAppPipeline(app, services,  _context));
         }
     }
 }

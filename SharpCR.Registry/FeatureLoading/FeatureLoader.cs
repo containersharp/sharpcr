@@ -35,6 +35,7 @@ namespace SharpCR.Registry.FeatureLoading
                 .Where(dllName  => dllName.Length > featurePrefix.Length && dllName.StartsWith(featurePrefix))
                 .Select(f => f.Substring(featurePrefix.Length))
                 .Where(feature => !toggles.TryGetValue(feature, out var enabled) || enabled)
+                .OrderBy(f => f)
                 .ToArray();
 
             var featureInterfaceType = typeof(IFeature);
