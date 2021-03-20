@@ -13,7 +13,7 @@
 
   <Target Name="PublishFeatures" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
-      <FeatureFiles Include="$(OutputPath)\SharpCR.Features.*.dll" />
+      <FeatureFiles Include="$(OutputPath)\SharpCR.Features.*" />
       <ResolvedFileToPublish Include="@(FeatureFiles)" Exclude="@(ResolvedFileToPublish)" Condition="'@(FeatureFiles)' != ''">
         <RelativePath>$([System.IO.Path]::GetFileName(%(FeatureFiles.Identity)))</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

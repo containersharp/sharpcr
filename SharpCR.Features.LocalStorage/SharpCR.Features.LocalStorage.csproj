@@ -13,10 +13,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SharpCR.Registry\SharpCR.Registry.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="SharpCR.Features" Version="1.0.2" />
     </ItemGroup>
 
