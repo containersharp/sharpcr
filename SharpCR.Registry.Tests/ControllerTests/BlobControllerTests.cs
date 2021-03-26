@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SharpCR.Features;
 using SharpCR.Features.Records;
@@ -258,7 +259,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var settings = Options.Create(new Settings { });
             var env = TestUtilities.CreateTestSetupContext().HostEnvironment;
 
-            return new BlobController(dataStore, blobStorage, settings, env).SetupHttpContext();
+            return new BlobController(dataStore, blobStorage, settings, env, NullLogger<BlobController>.Instance).SetupHttpContext();
         }
     }
 }
