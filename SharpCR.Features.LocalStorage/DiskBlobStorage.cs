@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +23,21 @@ namespace SharpCR.Features.LocalStorage
 
         public async Task<string> TryLocateExistingAsync(string digest)
         {
-            return await _blobIndexer.TryGetLocation(digest);
+            var location = await _blobIndexer.TryGetLocation(digest);
+            if (location == null)
+            {
+                return null;
+            }
+
+            if (File.Exists(MapPath(location)))
+            {
+                return location;
+            }
+            
+            // We don't delete index right after a blob is deleted (that will need to scan the whole index).
+            // So we postpone this removing to next locating when we find this file is actually missing from the disk.
+            var _ = _blobIndexer.RemoveAsync(digest, location);
+            return null;
         }
 
         public Task<Stream> ReadAsync(string location)
@@ -31,14 +46,15 @@ namespace SharpCR.Features.LocalStorage
             return Task.FromResult(File.Exists(path) ? File.OpenRead(path) : (Stream)null);
         }
 
-        public async Task DeleteAsync(string location)
+        public Task DeleteAsync(string location)
         {
             var path = MapPath(location);
             if (File.Exists(path))
             {
                 File.Delete(path);
-                await _blobIndexer.RemoveAsync(location);
             }
+
+            return Task.CompletedTask;
         }
 
         public async Task<string> SaveAsync(string digest, Stream stream, string repoName)
@@ -85,6 +101,7 @@ namespace SharpCR.Features.LocalStorage
         {
             private readonly string _indexFilePath;
             private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+            private readonly ConcurrentDictionary<string, string> _cachedItems = new ConcurrentDictionary<string, string>();
             private FileStream _indexFileStream;
             const string Splitter = "$";
 
@@ -106,6 +123,8 @@ namespace SharpCR.Features.LocalStorage
             
             public async Task AddAsync(string digest, string location)
             {
+                _cachedItems.TryAdd(digest, location);
+            
                 try
                 {
                     await _semaphoreSlim.WaitAsync();
@@ -121,13 +140,15 @@ namespace SharpCR.Features.LocalStorage
                 }
             }
 
-            public async Task RemoveAsync(string location)
+            public async Task RemoveAsync(string digest, string location)
             {
+                _cachedItems.TryRemove(digest, out _);
+                
                 try
                 {
                     await _semaphoreSlim.WaitAsync();
                     
-                    var lineSuffix = $"{Splitter}{location}";
+                    var lineMatch = $"{digest}{Splitter}{location}";
                     var newIndexFile = _indexFilePath + ".tmp";
 
                     var fsOut = File.OpenWrite(newIndexFile);
@@ -142,7 +163,7 @@ namespace SharpCR.Features.LocalStorage
                             break;
                         }
 
-                        if (!line.EndsWith(lineSuffix))
+                        if (!line.Equals(lineMatch, StringComparison.Ordinal))
                         {
                             await writer.WriteLineAsync(line);
                         }
@@ -154,6 +175,7 @@ namespace SharpCR.Features.LocalStorage
                         }
                     }
 
+                    await writer.FlushAsync();
                     await writer.DisposeAsync();
                     await fsOut.DisposeAsync();
                     await _indexFileStream.DisposeAsync();
@@ -168,6 +190,11 @@ namespace SharpCR.Features.LocalStorage
 
             public async Task<string> TryGetLocation(string digest)
             {
+                if (_cachedItems.TryGetValue(digest, out var location))
+                {
+                    return location;
+                }
+                
                 try
                 {
                     await _semaphoreSlim.WaitAsync();
@@ -185,6 +212,8 @@ namespace SharpCR.Features.LocalStorage
                             break;
                         }
 
+                        var values = line.Split(Splitter, StringSplitOptions.RemoveEmptyEntries);
+                        _cachedItems.AddOrUpdate(values[0], values[1], (key, oldValue) => values[1]);
                         if (line.StartsWith(linePrefix))
                         {
                             foundLocation = line.Substring(linePrefix.Length);

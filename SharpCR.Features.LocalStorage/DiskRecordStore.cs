@@ -14,10 +14,10 @@ namespace SharpCR.Features.LocalStorage
     public class DiskRecordStore: IRecordStore
     {
         private readonly LocalStorageConfiguration _config;
-        private HashSet<ArtifactRecord> _allArtifacts;
-        private HashSet<BlobRecord> _allBlobs;
-        private Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
-        private Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
+        private volatile HashSet<ArtifactRecord> _allArtifacts;
+        private volatile HashSet<BlobRecord> _allBlobs;
+        private volatile Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
+        private volatile Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
         private int _pendingWriting = 0;
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)

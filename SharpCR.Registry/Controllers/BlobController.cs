@@ -301,3 +301,10 @@ namespace SharpCR.Registry.Controllers
         }
     }
 }
+
+/*
+ * Docker client does add Content-Length, but it seems was overridden by the Go net/http package and a 'Transfer-Encoding: chunked' header was added 
+ * https://github.com/moby/moby/blob/797b974cb9/vendor/github.com/docker/distribution/registry/client/blob_writer.go#L72
+ * https://golang.org/src/net/http/transfer.go#L167
+ * 
+ */
