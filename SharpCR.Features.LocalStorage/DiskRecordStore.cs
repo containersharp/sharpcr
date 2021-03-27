@@ -18,8 +18,7 @@ namespace SharpCR.Features.LocalStorage
         private HashSet<BlobRecord> _allBlobs;
         private Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
         private Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
-        private readonly ReaderWriterLock _locker = new ReaderWriterLock();
-        private static readonly TimeSpan LockerTimeout = TimeSpan.FromSeconds(3);
+        private int _pendingWriting = 0;
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
@@ -29,72 +28,33 @@ namespace SharpCR.Features.LocalStorage
             ReadFromFile();
         }
 
-        T ReadResource<T>(Func<T> readOperation)
-        {
-            try
-            {
-                _locker.AcquireReaderLock(LockerTimeout);
-                return readOperation();
-            }
-            finally
-            {
-                _locker.ReleaseReaderLock();
-            }
-        }
-
-        void WriteResource(Action writeOperation, bool writeFile = true)
-        {
-            try
-            {
-                _locker.AcquireWriterLock(LockerTimeout);
-                writeOperation();
-                RecordsUpdated(writeFile);
-            }
-            finally
-            {
-                _locker.ReleaseWriterLock();
-            }
-        }
-
         public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
         {
-            var result = ReadResource(() => _allArtifacts.AsQueryable());
-            return Task.FromResult(result);
+            return Task.FromResult(_allArtifacts.AsQueryable());
         }
 
         public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
         {
-            var artifactRecord = ReadResource(() =>
-            {
-                return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
-                    ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
-                    : null;
-            });
+            var artifactRecord = _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
+                ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
+                : null;
             return Task.FromResult(artifactRecord);
         }
 
         public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
         {
-            var artifactRecord = ReadResource(() =>
-            {
-                return _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
-                    ? repoArtifacts.FirstOrDefault(a =>
-                        string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
-                    : null;
-            });
+            var artifactRecord =  _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
+                ? repoArtifacts.FirstOrDefault(a => string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
+                : null;
             return Task.FromResult(artifactRecord);
         }
 
         public async Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
         {
             var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
-            if (actualItem != null)
-            {
-                WriteResource(() =>
-                {
-                    _allArtifacts.Remove(actualItem);
-                });
-            }
+            
+            _allArtifacts.Remove(actualItem);
+            RecordsUpdated(true);
         }
 
         public async Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
@@ -102,32 +62,24 @@ namespace SharpCR.Features.LocalStorage
             var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
             if (actualItem != null)
             {
-                WriteResource(() =>
-                {
-                    _allArtifacts.Remove(actualItem);
-                    _allArtifacts.Add(artifactRecord);
-                });
+                _allArtifacts.Remove(actualItem);
+                _allArtifacts.Add(artifactRecord);
+                RecordsUpdated(true);
             }
         }
 
         public Task CreateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            WriteResource(() =>
-            {
-                _allArtifacts.Add(artifactRecord);
-            });
+            _allArtifacts.Add(artifactRecord);
+            RecordsUpdated(true);
             return Task.CompletedTask;
         }
 
         public Task<BlobRecord> GetBlobByDigestAsync(string repoName, string digest)
         {
-            var blobRecord = ReadResource(() =>
-            {
-                return _allBlobsByRepo.TryGetValue(repoName, out var repoBlobs)
-                    ? repoBlobs.FirstOrDefault(a =>
-                        string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
-                    : null;
-            });
+            var blobRecord = _allBlobsByRepo.TryGetValue(repoName, out var repoBlobs)
+                ? repoBlobs.FirstOrDefault(a => string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
+                : null;
             return Task.FromResult(blobRecord);
         }
 
@@ -136,41 +88,55 @@ namespace SharpCR.Features.LocalStorage
             var actualItem = await GetBlobByDigestAsync(blobRecord.RepositoryName, blobRecord.DigestString);
             if (actualItem != null)
             {
-                WriteResource(() =>
-                {
-                    _allBlobs.Remove(actualItem);
-                });
+                _allBlobs.Remove(actualItem);
+                RecordsUpdated(true);
             }
         }
 
         public Task CreateBlobAsync(BlobRecord blobRecord)
         {
-            WriteResource(() =>
-            {
-                _allBlobs.Add(blobRecord);
-            });
+            _allBlobs.Add(blobRecord);
+            RecordsUpdated(true);
             return Task.CompletedTask;
         }
 
         private void ReadFromFile()
         {
-            WriteResource(() =>
+            var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
+            if (!File.Exists(dataFile))
             {
-                var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
-                if (!File.Exists(dataFile))
-                {
-                    _allArtifacts = new HashSet<ArtifactRecord>();
-                    _allBlobs = new HashSet<BlobRecord>();
-                    return;
-                }
+                _allArtifacts = new HashSet<ArtifactRecord>();
+                _allBlobs = new HashSet<BlobRecord>();
+                SyncIndexes();
+                return;
+            }
 
-                using var fs = File.OpenRead(dataFile);
-                var bytes = File.ReadAllBytes(dataFile);
-                var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes,
-                    new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-                _allArtifacts = storedObject.Artifacts.ToHashSet();
-                _allBlobs = storedObject.Blobs.ToHashSet();
-            }, false);
+            using var fs = File.OpenRead(dataFile);
+            var bytes = File.ReadAllBytes(dataFile);
+            var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes,
+                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+            _allArtifacts = storedObject.Artifacts.ToHashSet();
+            _allBlobs = storedObject.Blobs.ToHashSet();
+            SyncIndexes();
+        }
+
+        private void WriteToFile()
+        {
+            var dataObjects = new DataObjects
+            {
+                Artifacts = _allArtifacts.ToArray(),
+                Blobs = _allBlobs.ToArray()
+            };
+
+            var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
+            if (!Directory.Exists(_config.BasePath))
+            {
+                Directory.CreateDirectory(_config.BasePath);
+            }
+
+            using var fs = File.OpenWrite(dataFile);
+            using var utf8JsonWriter = new Utf8JsonWriter(fs);
+            JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
         }
 
         private void RecordsUpdated(bool writeFile)
@@ -181,28 +147,21 @@ namespace SharpCR.Features.LocalStorage
                 return;
             }
 
+            if (_pendingWriting > 0)
+            {
+                return;
+            }
+
+            Interlocked.Increment(ref _pendingWriting);
             Task.Run(() =>
             {
-                WriteResource(() =>
-                {
-                    var dataObjects = new DataObjects
-                    {
-                        Artifacts = _allArtifacts.ToArray(),
-                        Blobs = _allBlobs.ToArray()
-                    };
-
-                    var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
-                    if (!Directory.Exists(_config.BasePath))
-                    {
-                        Directory.CreateDirectory(_config.BasePath);
-                    }
-                    
-                    using var fs = File.OpenWrite(dataFile);
-                    using var utf8JsonWriter = new Utf8JsonWriter(fs);
-                    JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-                });
+                Task.Delay(TimeSpan.FromSeconds(3)).Wait();
+                WriteToFile();
+                Interlocked.Decrement(ref _pendingWriting);
             });
         }
+        
+        
 
         private void SyncIndexes()
         {

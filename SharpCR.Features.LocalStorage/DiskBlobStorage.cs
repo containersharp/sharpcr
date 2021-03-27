@@ -1,11 +1,13 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace SharpCR.Features.LocalStorage
 {
-    public class DiskBlobStorage : IBlobStorage
+    public class DiskBlobStorage : IBlobStorage, IDisposable
     {
         private readonly string _storageBasePath;
         private readonly FileIndexer _blobIndexer;
@@ -79,9 +81,11 @@ namespace SharpCR.Features.LocalStorage
             return Path.Combine(_storageBasePath, canonicalSubPath);
         }
 
-        public class FileIndexer
+        private class FileIndexer : IDisposable
         {
             private readonly string _indexFilePath;
+            private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+            private FileStream _indexFileStream;
             const string Splitter = "$";
 
             public FileIndexer(string indexFilePath)
@@ -92,78 +96,120 @@ namespace SharpCR.Features.LocalStorage
                 {
                     Directory.CreateDirectory(dir);
                 }
+
                 if (!File.Exists(indexFilePath))
                 {
                     File.Create(indexFilePath).Dispose();
                 }
+                _indexFileStream =  File.Open(indexFilePath, FileMode.Open, FileAccess.ReadWrite);
             }
+            
             public async Task AddAsync(string digest, string location)
             {
-                await using var fs = File.OpenWrite(_indexFilePath);
-                await using var writer = new StreamWriter(fs);
-                await writer.WriteLineAsync($"{digest}{Splitter}{location}");
+                try
+                {
+                    await _semaphoreSlim.WaitAsync();
+
+                    _indexFileStream.Seek(0, SeekOrigin.End);
+                    var writer = new StreamWriter(_indexFileStream);
+                    await writer.WriteLineAsync($"{digest}{Splitter}{location}");
+                    await writer.FlushAsync();
+                }
+                finally
+                {
+                    _semaphoreSlim.Release();
+                }
             }
 
             public async Task RemoveAsync(string location)
             {
-                var lineSuffix = $"{Splitter}{location}";
-                var newIndexFile = _indexFilePath + ".tmp";
-
-                var fs = File.OpenRead(_indexFilePath);
-                var fsOut = File.OpenWrite(newIndexFile);
-
-                using var reader = new StreamReader(fs);
-                using var writer = new StreamWriter(fsOut);
-                while (true)
+                try
                 {
-                    var line = await reader.ReadLineAsync();
-                    if (line == null)
+                    await _semaphoreSlim.WaitAsync();
+                    
+                    var lineSuffix = $"{Splitter}{location}";
+                    var newIndexFile = _indexFilePath + ".tmp";
+
+                    var fsOut = File.OpenWrite(newIndexFile);
+                    _indexFileStream.Seek(0, SeekOrigin.Begin);
+                    var reader = new StreamReader(_indexFileStream);
+                    var writer = new StreamWriter(fsOut);
+                    while (true)
                     {
-                        break;
+                        var line = await reader.ReadLineAsync();
+                        if (line == null)
+                        {
+                            break;
+                        }
+
+                        if (!line.EndsWith(lineSuffix))
+                        {
+                            await writer.WriteLineAsync(line);
+                        }
+                        else
+                        {
+                            await writer.FlushAsync();
+                            await _indexFileStream.CopyToAsync(fsOut);
+                            break;
+                        }
                     }
 
-                    if (!line.EndsWith(lineSuffix))
-                    {
-                        await writer.WriteLineAsync(line);
-                    }
-                    else
-                    {
-                        await writer.FlushAsync();
-                        await fs.CopyToAsync(fsOut);
-                        break;
-                    }
+                    await writer.DisposeAsync();
+                    await fsOut.DisposeAsync();
+                    await _indexFileStream.DisposeAsync();
+                    File.Move(newIndexFile, _indexFilePath, true);
+                    _indexFileStream = File.Open(_indexFilePath, FileMode.Open, FileAccess.ReadWrite);
                 }
-
-                await writer.DisposeAsync();
-                await fsOut.DisposeAsync();
-                await fs.DisposeAsync();
-                File.Move(newIndexFile, _indexFilePath, true);
+                finally
+                {
+                    _semaphoreSlim.Release();
+                }
             }
 
             public async Task<string> TryGetLocation(string digest)
             {
-                var linePrefix = $"{digest}{Splitter}";
-                
-                await using var fs = File.OpenRead(_indexFilePath);
-                using var reader = new StreamReader(fs);
-                while (true)
+                try
                 {
-                    var line = await reader.ReadLineAsync();
-                    if (line == null)
+                    await _semaphoreSlim.WaitAsync();
+
+                    string foundLocation = null;
+                    var linePrefix = $"{digest}{Splitter}";
+
+                    _indexFileStream.Seek(0, SeekOrigin.Begin);
+                    var reader = new StreamReader(_indexFileStream);
+                    while (true)
                     {
-                        break;
+                        var line = await reader.ReadLineAsync();
+                        if (line == null)
+                        {
+                            break;
+                        }
+
+                        if (line.StartsWith(linePrefix))
+                        {
+                            foundLocation = line.Substring(linePrefix.Length);
+                            break;
+                        }
                     }
 
-                    if (line.StartsWith(linePrefix))
-                    {
-                        return line.Substring(linePrefix.Length);
-                    }
+                    return foundLocation;
                 }
-
-                return null;
+                finally
+                {
+                    _semaphoreSlim.Release();
+                }
             }
             
-            // todo: test this indexer
+            public void Dispose()
+            {
+                _indexFileStream?.Dispose();
+                _semaphoreSlim.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            _blobIndexer?.Dispose();
         }
     }
 }
