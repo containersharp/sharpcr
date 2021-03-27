@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using SharpCR.Features.LocalStorage;
@@ -76,14 +77,14 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var digest = "sha256:ab123de";
             var location = await storage.SaveAsync(digest, ms, "abc/foo");
 
-            var indexPath = Path.Combine(blobPath, "index.txt");
-            var indexContent = await File.ReadAllTextAsync(indexPath);
+            storage.Dispose();
+            var indexContent = await File.ReadAllTextAsync(Path.Combine(blobPath, "index.txt"));
             Assert.Contains(location, indexContent);
             Assert.Contains(digest, indexContent);
         }
 
         [Fact]
-        public async Task ShouldRemoveFromIndexWhenDeleteBlob()
+        public async Task ShouldRemoveFromIndexAtNextLocatingAfterDelete()
         {
             var storage = CreateBlobStorage(out var blobPath);
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
@@ -92,9 +93,11 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var digest = "sha256:ab123de";
             var location = await storage.SaveAsync(digest, ms, "abc/foo");
             await storage.DeleteAsync(location);
-            
-            var indexPath = Path.Combine(blobPath, "index.txt");
-            var indexContent = await File.ReadAllTextAsync(indexPath);
+            await storage.TryLocateExistingAsync(digest);
+
+            Thread.Sleep(TimeSpan.FromMilliseconds(50));
+            storage.Dispose();
+            var indexContent = await File.ReadAllTextAsync(Path.Combine(blobPath, "index.txt"));
             Assert.DoesNotContain(location, indexContent);
             Assert.DoesNotContain(digest, indexContent);
         }

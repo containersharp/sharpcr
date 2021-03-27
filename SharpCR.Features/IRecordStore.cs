@@ -10,7 +10,8 @@ namespace SharpCR.Features
 
         Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag);
 
-        Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString);
+        // todo: publish a 1.0.2 version
+        Task<ArtifactRecord[]> GetArtifactByDigestAsync(string repoName, string digestString);
 
         Task DeleteArtifactAsync(ArtifactRecord artifactRecord);
         Task UpdateArtifactAsync(ArtifactRecord artifactRecord);

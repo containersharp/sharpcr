@@ -29,8 +29,8 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
                 RepositoryName = "library/abcd"
             };
             await store.CreateArtifactAsync(artifact);
+            store.Dispose();
             
-            Thread.Sleep(TimeSpan.FromMilliseconds(100));
             Assert.True(File.Exists(recordsFile));
             Assert.True(new FileInfo(recordsFile).Length > 0);
         }

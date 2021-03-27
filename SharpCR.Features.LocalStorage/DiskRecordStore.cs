@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,13 +12,11 @@ using SharpCR.Features.Records;
 
 namespace SharpCR.Features.LocalStorage
 {
-    public class DiskRecordStore: IRecordStore
+    public class DiskRecordStore: IRecordStore, IDisposable
     {
         private readonly LocalStorageConfiguration _config;
-        private volatile HashSet<ArtifactRecord> _allArtifacts;
-        private volatile HashSet<BlobRecord> _allBlobs;
-        private volatile Dictionary<string, List<ArtifactRecord>> _allRecordsByRepo;
-        private volatile Dictionary<string, List<BlobRecord>> _allBlobsByRepo;
+        private volatile ConcurrentDictionary<string, ConcurrentDictionary<ArtifactRecord, object>> _allArtifactsByRepo;
+        private volatile ConcurrentDictionary<string, ConcurrentDictionary<BlobRecord, object>> _allBlobsByRepo;
         private int _pendingWriting = 0;
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
@@ -30,55 +29,79 @@ namespace SharpCR.Features.LocalStorage
 
         public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
         {
-            return Task.FromResult(_allArtifacts.AsQueryable());
+            if (_allArtifactsByRepo.TryGetValue(repoName, out var items))
+            {
+                return Task.FromResult(items.Keys.AsQueryable());
+            }
+            return Task.FromResult(new ArtifactRecord[0].AsQueryable()); 
         }
 
         public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
         {
-            var artifactRecord = _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
-                ? repoArtifacts.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
+            var artifactRecord = _allArtifactsByRepo.TryGetValue(repoName, out var repoArtifacts)
+                ? repoArtifacts.Keys.FirstOrDefault(a => string.Equals(a.Tag, tag, StringComparison.OrdinalIgnoreCase))
                 : null;
             return Task.FromResult(artifactRecord);
         }
 
         public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
         {
-            var artifactRecord =  _allRecordsByRepo.TryGetValue(repoName, out var repoArtifacts)
-                ? repoArtifacts.FirstOrDefault(a => string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
+            var artifactRecord =  _allArtifactsByRepo.TryGetValue(repoName, out var artifactsInRepo)
+                ? artifactsInRepo.Keys.FirstOrDefault(a => string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
                 : null;
             return Task.FromResult(artifactRecord);
         }
 
         public async Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
-            
-            _allArtifacts.Remove(actualItem);
-            RecordsUpdated(true);
+            var artifactsInRepo = await ListArtifactAsync(artifactRecord.RepositoryName);
+            var actualItem = artifactsInRepo.FirstOrDefault(a =>
+                string.Equals(a.DigestString, artifactRecord.DigestString, StringComparison.OrdinalIgnoreCase)
+                && (artifactRecord.Tag == null || string.Equals(a.Tag, artifactRecord.Tag, StringComparison.OrdinalIgnoreCase)));
+
+            if (actualItem != null && _allArtifactsByRepo.TryGetValue(artifactRecord.RepositoryName, out var repoArtifacts))
+            {
+                repoArtifacts.TryRemove(actualItem, out _);
+                RecordsUpdated();
+            }
         }
 
         public async Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var actualItem = await GetArtifactByDigestAsync(artifactRecord.RepositoryName, artifactRecord.DigestString);
-            if (actualItem != null)
+            var artifactsInRepo = await ListArtifactAsync(artifactRecord.RepositoryName);
+            var actualItem = artifactsInRepo.FirstOrDefault(a =>
+                string.Equals(a.DigestString, artifactRecord.DigestString, StringComparison.OrdinalIgnoreCase)
+                && (artifactRecord.Tag == null || string.Equals(a.Tag, artifactRecord.Tag, StringComparison.OrdinalIgnoreCase)));
+            
+            if (actualItem != null && _allArtifactsByRepo.TryGetValue(artifactRecord.RepositoryName, out var repoArtifacts))
             {
-                _allArtifacts.Remove(actualItem);
-                _allArtifacts.Add(artifactRecord);
-                RecordsUpdated(true);
+                repoArtifacts.TryRemove(actualItem, out _);
+                repoArtifacts.TryAdd(artifactRecord, null /* we don't need this value */);
+                RecordsUpdated();
             }
         }
 
         public Task CreateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            _allArtifacts.Add(artifactRecord);
-            RecordsUpdated(true);
+            if (!_allArtifactsByRepo.TryGetValue(artifactRecord.RepositoryName, out var repoArtifacts))
+            {
+                repoArtifacts = new ConcurrentDictionary<ArtifactRecord, object>();
+                _allArtifactsByRepo.TryAdd(artifactRecord.RepositoryName, repoArtifacts);
+            }
+            
+            if (_allArtifactsByRepo.TryGetValue(artifactRecord.RepositoryName, out var repoArtifacts2))
+            {
+                repoArtifacts2.TryAdd(artifactRecord, null /* we don't need this value */);
+            }
+            
+            RecordsUpdated();
             return Task.CompletedTask;
         }
 
         public Task<BlobRecord> GetBlobByDigestAsync(string repoName, string digest)
         {
             var blobRecord = _allBlobsByRepo.TryGetValue(repoName, out var repoBlobs)
-                ? repoBlobs.FirstOrDefault(a => string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
+                ? repoBlobs.Keys.FirstOrDefault(a => string.Equals(a.DigestString, digest, StringComparison.OrdinalIgnoreCase))
                 : null;
             return Task.FromResult(blobRecord);
         }
@@ -86,46 +109,66 @@ namespace SharpCR.Features.LocalStorage
         public async Task DeleteBlobAsync(BlobRecord blobRecord)
         {
             var actualItem = await GetBlobByDigestAsync(blobRecord.RepositoryName, blobRecord.DigestString);
-            if (actualItem != null)
+            if (_allBlobsByRepo.TryGetValue(blobRecord.RepositoryName, out var blobsInRepo))
             {
-                _allBlobs.Remove(actualItem);
-                RecordsUpdated(true);
+                blobsInRepo.TryRemove(actualItem, out _);
+                RecordsUpdated();
             }
         }
 
         public Task CreateBlobAsync(BlobRecord blobRecord)
         {
-            _allBlobs.Add(blobRecord);
-            RecordsUpdated(true);
+            if (!_allBlobsByRepo.TryGetValue(blobRecord.RepositoryName, out var blobsInRepo))
+            {
+                blobsInRepo = new ConcurrentDictionary<BlobRecord, object>();
+                _allBlobsByRepo.TryAdd(blobRecord.RepositoryName, blobsInRepo);
+            }
+            
+            if (_allBlobsByRepo.TryGetValue(blobRecord.RepositoryName, out var blobsInRepo2))
+            {
+                blobsInRepo2.TryAdd(blobRecord, null /* we don't need this value */);
+            }
+            
+            RecordsUpdated();
             return Task.CompletedTask;
         }
 
         private void ReadFromFile()
         {
             var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
-            if (!File.Exists(dataFile))
+            var artifactList = new List<ArtifactRecord>();
+            var blobList = new List<BlobRecord>();
+            if (File.Exists(dataFile))
             {
-                _allArtifacts = new HashSet<ArtifactRecord>();
-                _allBlobs = new HashSet<BlobRecord>();
-                SyncIndexes();
-                return;
+                using var fs = File.OpenRead(dataFile);
+                var valueTask = JsonSerializer.DeserializeAsync<DataObjects>(fs, 
+                    new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase})
+                    .ConfigureAwait(false);
+                var storedObject = valueTask.GetAwaiter().GetResult();
+                artifactList = storedObject.Artifacts.ToList();
+                blobList = storedObject.Blobs.ToList();
             }
-
-            using var fs = File.OpenRead(dataFile);
-            var bytes = File.ReadAllBytes(dataFile);
-            var storedObject = JsonSerializer.Deserialize<DataObjects>(bytes,
-                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-            _allArtifacts = storedObject.Artifacts.ToHashSet();
-            _allBlobs = storedObject.Blobs.ToHashSet();
-            SyncIndexes();
+            
+            _allArtifactsByRepo = new ConcurrentDictionary<string, ConcurrentDictionary<ArtifactRecord, object>>(
+                artifactList.GroupBy(a => a.RepositoryName)
+                    .ToDictionary(g => g.Key,
+                        g => new ConcurrentDictionary<ArtifactRecord, object>(
+                            g.ToDictionary(x => x, x => (object)null)
+                        )));
+            _allBlobsByRepo = new ConcurrentDictionary<string, ConcurrentDictionary<BlobRecord, object>>(
+                blobList.GroupBy(b => b.RepositoryName)
+                    .ToDictionary(g => g.Key,
+                    g => new ConcurrentDictionary<BlobRecord, object>(
+                        g.ToDictionary(x => x, x => (object)null)
+                        )));
         }
 
         private void WriteToFile()
         {
             var dataObjects = new DataObjects
             {
-                Artifacts = _allArtifacts.ToArray(),
-                Blobs = _allBlobs.ToArray()
+                Artifacts = _allArtifactsByRepo.Values.Select(x => x.Keys).SelectMany(x => x) .ToArray(),
+                Blobs =  _allBlobsByRepo.Values.Select(x => x.Keys).SelectMany(x => x).ToArray()
             };
 
             var dataFile = Path.Combine(_config.BasePath, _config.RecordsFileName);
@@ -139,14 +182,8 @@ namespace SharpCR.Features.LocalStorage
             JsonSerializer.Serialize(utf8JsonWriter, dataObjects, new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
         }
 
-        private void RecordsUpdated(bool writeFile)
+        private void RecordsUpdated()
         {
-            SyncIndexes();
-            if (!writeFile)
-            {
-                return;
-            }
-
             if (_pendingWriting > 0)
             {
                 return;
@@ -156,24 +193,24 @@ namespace SharpCR.Features.LocalStorage
             Task.Run(() =>
             {
                 Task.Delay(TimeSpan.FromSeconds(3)).Wait();
-                WriteToFile();
-                Interlocked.Decrement(ref _pendingWriting);
+                WriteToFileNow();
             });
         }
-        
-        
 
-        private void SyncIndexes()
+        private void WriteToFileNow()
         {
-            _allRecordsByRepo = _allArtifacts
-                .GroupBy(a => a.RepositoryName)
-                .ToDictionary(g => g.Key,
-                    g => g.ToList());
+            if (_pendingWriting == 0)
+            {
+                return;
+            }
             
-            _allBlobsByRepo = _allBlobs
-                .GroupBy(a => a.RepositoryName)
-                .ToDictionary(g => g.Key,
-                    g => g.ToList());
+            WriteToFile();
+            Interlocked.Decrement(ref _pendingWriting);
+        }
+
+        public void Dispose()
+        {
+            WriteToFileNow();
         }
     }
 
