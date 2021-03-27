@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using SharpCR.Features;
 using SharpCR.Registry.FeatureLoading;
 
@@ -30,6 +31,8 @@ namespace SharpCR.Registry
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            var configuration = _context.Configuration.GetSection("Settings")?.Get<Settings>() ?? new Settings();
+            services.AddSingleton(Options.Create(configuration));
             _loadedFeatures.ForEach(feature => feature.ConfigureServices(services, _context));
         }
 
