@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using SharpCR.Features;
 using SharpCR.Features.Records;
@@ -13,16 +14,27 @@ using SharpCR.Manifests;
 
 namespace SharpCR.Registry.Controllers
 {
+    /// <summary>
+    /// Implements the manifests related APIs
+    /// </summary>
+    /// <remarks>
+    /// Docker Distribution Registry Implementation
+    /// https://github.com/distribution/distribution/blob/main/registry/handlers/manifests.go#L83
+    /// </remarks>
     public class ManifestController : ControllerBase
     {
         // todo: add logging
         // todo: handling errors
+        // todo: content negotiation and OCI image compliance
+        
         private readonly IRecordStore _recordStore;
+        private readonly ILogger<ManifestController> _logger;
         private readonly Lazy<Dictionary<string, IManifestParser>> _manifestParsers;
 
-        public ManifestController(IRecordStore recordStore)
+        public ManifestController(IRecordStore recordStore, ILogger<ManifestController> logger)
         {
             _recordStore = recordStore;
+            _logger = logger;
             _manifestParsers = new Lazy<Dictionary<string, IManifestParser>>(InitializeManifestParsers);
         }
 
@@ -34,21 +46,25 @@ namespace SharpCR.Registry.Controllers
             var artifact = await GetArtifactByReferenceAsync(reference, repo);
             if (artifact == null)
             {
+                _logger.LogDebug("Manifest not found {@query}", new {repo, reference});
                 return new NotFoundResult();
             }
 
-            HttpContext.Response.Headers.Add("Docker-Content-Digest", artifact.DigestString);
-
-            var manifestBytes = artifact.ManifestBytes;
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
-            if (writeFile)
-            {
-                return new FileContentResult(manifestBytes, MediaTypeHeaderValue.Parse(artifact.ManifestMediaType));
-            }
-
+            var manifestBytes = artifact.ManifestBytes;
+            
+            HttpContext.Response.Headers.Add("Docker-Content-Digest", artifact.DigestString);
             HttpContext.Response.Headers.Add("Content-Type", artifact.ManifestMediaType);
             HttpContext.Response.Headers.Add("Content-Length", manifestBytes.Length.ToString());
-            return new EmptyResult();
+
+            if (!writeFile)
+            {
+                _logger.LogDebug("Skipping writing content for HEAD request of manifest {@query}", new {repo, reference});
+                return new EmptyResult();
+            }
+
+            _logger.LogInformation("Writing content for manifest {@query}", new {repo, reference, digest = artifact.DigestString});
+            return new FileContentResult(manifestBytes, MediaTypeHeaderValue.Parse(artifact.ManifestMediaType));
         }
 
         [RegistryRoute("manifests/{reference}")]
@@ -69,7 +85,7 @@ namespace SharpCR.Registry.Controllers
             var mediaType = Request.Headers["Content-Type"];
             if (!_manifestParsers.Value.TryGetValue(mediaType.ToString(), out var acceptableParser))
             {
-                // unsupported media type
+                _logger.LogDebug("Unsupported media type received for manifest {@req}", new {repo, reference, digest = queriedDigest, mediaType});
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
 
@@ -80,7 +96,7 @@ namespace SharpCR.Registry.Controllers
             var pushedDigest  = manifest.Digest;
             if (!string.IsNullOrEmpty(queriedDigest)  && !string.Equals(queriedDigest, pushedDigest, StringComparison.Ordinal))
             {
-                // digest does not match in URL and body
+                _logger.LogDebug("Digest in URL does not match that computed from payload: {@req}", new {repo, reference, queriedDigest, pushedDigest});
                 return new StatusCodeResult((int) HttpStatusCode.BadRequest);
             }
 
@@ -89,7 +105,8 @@ namespace SharpCR.Registry.Controllers
             {
                 if (!await ReferenceExistsAsync(item, repo))
                 {
-                    // some of the referenced item does not exist
+                    _logger.LogDebug("One or more referenced items was not pushed before this manifest is created: {@req}", 
+                        new {repo, reference = item.Digest, mediaType = item.MediaType});
                     return new StatusCodeResult((int) HttpStatusCode.BadRequest);    
                 }
             }
@@ -116,6 +133,8 @@ namespace SharpCR.Registry.Controllers
                 // todo: cleanup replaced blobs...
             }
 
+            _logger.LogInformation("New manifest created: {@req}", 
+                new {repo, reference, digest = pushedDigest, mediaType = manifest.MediaType});
             HttpContext.Response.Headers.Add("Location", $"/v2/{repo}/manifests/{reference}");
             HttpContext.Response.Headers.Add("Docker-Content-Digest", pushedDigest);
             return new StatusCodeResult((int) HttpStatusCode.Created);
@@ -128,12 +147,15 @@ namespace SharpCR.Registry.Controllers
             var artifact = await GetArtifactByReferenceAsync(reference, repo);
             if (artifact == null)
             {
+                _logger.LogDebug("Manifest not found: {@req}", new {repo, reference});
                 return new NotFoundResult();
             }
 
             await _recordStore.DeleteArtifactAsync(artifact);
-            // todo: delete all orphan blobs...
+            _logger.LogInformation("Manifest deleted: {@req}", new {repo, reference});
             return new StatusCodeResult((int)HttpStatusCode.Accepted);
+            
+            // todo: delete all orphan blobs...
         }
 
         private static Dictionary<string, IManifestParser> InitializeManifestParsers()
@@ -154,9 +176,11 @@ namespace SharpCR.Registry.Controllers
         {
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
+                // this is a sub manifest
                 return (null != await _recordStore.GetArtifactByDigestAsync(repoName, referencedItem.Digest));
             }
 
+            // this is a blob
             return (null != await _recordStore.GetBlobByDigestAsync(repoName, referencedItem.Digest));
         }
 

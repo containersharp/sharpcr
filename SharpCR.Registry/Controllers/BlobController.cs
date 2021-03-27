@@ -13,6 +13,13 @@ using SharpCR.Features.Records;
 
 namespace SharpCR.Registry.Controllers
 {
+    /// <summary>
+    /// Implements the blob related APIs
+    /// </summary>
+    /// <remarks>
+    /// Docker Distribution Registry Implementation
+    /// https://github.com/distribution/distribution/blob/main/registry/handlers/blob.go
+    /// </remarks>
     public class BlobController : ControllerBase
     {
         private readonly IRecordStore _recordStore;
@@ -47,13 +54,13 @@ namespace SharpCR.Registry.Controllers
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
             if (!writeFile)
             {
-                _logger.LogDebug("Not asking content for existing blob {@blob}, storage location: {@blobLoc}", blob.DigestString, blob.StorageLocation);
+                _logger.LogDebug("Skipping writing content for HEAD request of blob {@blob}, storage location: {@blobLoc}", blob.DigestString, blob.StorageLocation);
                 return new EmptyResult();
             }
 
             if (!_blobStorage.SupportsDownloading)
             {
-                _logger.LogInformation("Writing blob {@blob} content from {@blobLoc}...", blob.DigestString, blob.StorageLocation);
+                _logger.LogInformation("Writing content for blob {@blob} from {@blobLoc}...", blob.DigestString, blob.StorageLocation);
                 var content = await _blobStorage.ReadAsync(blob.StorageLocation);
                 return new FileStreamResult(content, blob.MediaType ?? "application/octet-stream");
             }

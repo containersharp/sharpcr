@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using SharpCR.Features.Records;
 using SharpCR.Manifests;
 using SharpCR.Registry.Controllers;
@@ -22,7 +23,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dataStore = new RecordStoreStub().WithArtifacts(dummyArtifact1, dummyArtifact2);
 
-            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var controller = new ManifestController(dataStore, NullLogger<ManifestController>.Instance).SetupHttpContext();
             controller.HttpContext.Request.Method = "GET";
 
             var manifestResponse = await controller.Get(repositoryName, "v1.0.0");
@@ -45,7 +46,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var dummyArtifact2 = new ArtifactRecord {Tag = "v1.0.0", RepositoryName = repositoryName, ManifestBytes = manifestBytes, ManifestMediaType = manifestType};
             var dataStore = new RecordStoreStub().WithArtifacts(dummyArtifact1, dummyArtifact2);
 
-            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var controller = new ManifestController(dataStore, NullLogger<ManifestController>.Instance).SetupHttpContext();
             var deleteResponse = await controller.Delete(repositoryName, tag);
             var statusCodeResult = deleteResponse as StatusCodeResult;
 
@@ -63,7 +64,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
             var manifestType = "application/vnd.docker.distribution.manifest.v2+json";
             var dataStore = new RecordStoreStub().WithBlobs(BuildBlobRecords(repositoryName, manifestBytes));
 
-            var controller = new ManifestController(dataStore).SetupHttpContext();
+            var controller = new ManifestController(dataStore, NullLogger<ManifestController>.Instance).SetupHttpContext();
             controller.Request.Headers.Add("Content-Type", manifestType);
             controller.Request.Body = new MemoryStream(manifestBytes);
 
