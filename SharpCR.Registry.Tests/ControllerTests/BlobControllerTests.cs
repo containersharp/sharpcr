@@ -109,7 +109,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var blobRecord1 = new BlobRecord
             {
-                RepositoryName = "repo1",
+                RepositoryName = "library/repo1",
                 DigestString = digest,
                 ContentLength = 100,
                 StorageLocation = "location"

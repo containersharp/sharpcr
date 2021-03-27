@@ -85,6 +85,7 @@ namespace SharpCR.Registry.Tests.ApiTests
             
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
-        
+
+        // todo: test repo prefix defaults to library
     }
 }
