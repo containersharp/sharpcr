@@ -98,7 +98,7 @@ namespace SharpCR.Registry.Controllers
             var sessionIdPrefix = sessionId.Split("_", StringSplitOptions.RemoveEmptyEntries);
             if (sessionIdPrefix.Length != 2 || !string.Equals(sessionIdPrefix[0], _settings.BlobUploadSessionIdPrefix))
             {
-                _logger.LogDebug("Bad session id: {@session}...", new { repo, sessionId});
+                _logger.LogDebug("Bad session id: {@session}...", new { repo, sessionId, digest});
                 return BadRequest();
             }
 
@@ -108,13 +108,13 @@ namespace SharpCR.Registry.Controllers
 
             if (receivingChunks)
             {
-                _logger.LogDebug("Receiving chunk in session {@session}...", new { repo, sessionId});
+                _logger.LogDebug("Receiving chunk in session {@session}...", new { repo, sessionId, digest});
                 Response.Headers.Add("Docker-Upload-UUID", sessionId);
-                var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, false, repo, sessionId);
+                var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, false, repo, sessionId, digest);
                 var receivedSuccessfully = chunkSaveSucceeded.Item1;
                 if (receivedSuccessfully)
                 {
-                    _logger.LogInformation("Blob chunk received in session {@session}...", new { repo, sessionId});
+                    _logger.LogInformation("Blob chunk received in session {@session}...", new { repo, sessionId, digest});
                 }
 
                 return receivedSuccessfully 
@@ -147,7 +147,7 @@ namespace SharpCR.Registry.Controllers
         private async Task<IActionResult> FinishUploading(string repo, string digest, FileInfo blobTempFile, bool chunkedEncoding, string sessionId)
         {
             _logger.LogDebug("Finishing upload for {@upload}...", new {repo, sessionId, digest});
-            var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, true, repo, sessionId);
+            var chunkSaveSucceeded = await SaveChunk(blobTempFile, chunkedEncoding, true, repo, sessionId, digest);
             if (!chunkSaveSucceeded.Item1)
             {
                 return chunkSaveSucceeded.Item2;
@@ -205,6 +205,10 @@ namespace SharpCR.Registry.Controllers
 
         async Task<IActionResult> MountBlob(string repo, string digest, string @from, string sessionId)
         {
+            if (!from.Contains('/'))
+            {
+                from = $"library/{from}";
+            }
             var existedBlob = await _recordStore.GetBlobByDigestAsync(@from, digest);
             if (existedBlob == null)
             {
@@ -227,7 +231,8 @@ namespace SharpCR.Registry.Controllers
             return Created($"/v2/{repo}/blobs/{digest}", null);
         }
 
-        private async Task<Tuple<bool, IActionResult>> SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, string repo, string sessionId)
+        private async Task<Tuple<bool, IActionResult>> SaveChunk(FileInfo tempFile, bool chunkedEncoding, bool closing, 
+            string repo, string sessionId, string digest)
         {
             var requestContentLength = Request.Headers.ContentLength;
             if (requestContentLength == 0)
@@ -238,7 +243,7 @@ namespace SharpCR.Registry.Controllers
             var existingLength = tempFile.Exists ? tempFile.Length : 0;
             if (!chunkedEncoding && !ValidateContentRange(Request.Headers["Content-Range"].ToString(), requestContentLength, existingLength, out var actionResult))
             {
-                _logger.LogDebug("Bad request range header in session {@session}", new { repo, sessionId});
+                _logger.LogDebug("Bad request range header in session {@session}", new { repo, sessionId, digest});
                 return Tuple.Create(false, actionResult);
             }
 
@@ -254,7 +259,7 @@ namespace SharpCR.Registry.Controllers
             var receivedLength = updatedLength - existingLength;
             if (receivedLength == 0 || (!chunkedEncoding && requestContentLength.HasValue && requestContentLength != receivedLength))
             {
-                _logger.LogDebug("Content length did not match in session {@session}", new { repo, sessionId});
+                _logger.LogDebug("Content length did not match in session {@session}", new { repo, sessionId, digest});
                 await receivedStream.DisposeAsync();
                 actionResult = BadRequest();
                 return Tuple.Create(false, actionResult);
