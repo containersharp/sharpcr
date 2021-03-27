@@ -43,7 +43,6 @@ namespace SharpCR.Registry
             {
                 app.UseDeveloperExceptionPage();
             }
-            app.UseHttpsRedirection();
             app.UseRouting();
             
             _loadedFeatures.ForEach(feature => feature.ConfigureWebAppPipeline(app, services,  _context));
