@@ -1,6 +1,6 @@
+using System;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -21,7 +21,10 @@ namespace SharpCR.Registry
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseKestrel(options =>
+                    {
+                        options.Limits.MinRequestBodyDataRate = new MinDataRate(10240, TimeSpan.FromSeconds(5));
+                    }).UseStartup<Startup>();
                 });
     }
 }
