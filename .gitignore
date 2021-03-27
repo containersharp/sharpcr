@@ -366,6 +366,7 @@ FodyWeavers.xsd
 .DS_Store
 .idea/
 
-SharpCR.Registry/blobs/
-SharpCR.Registry/uploading-blobs/
-SharpCR.Registry/records.json
+SharpCR.Registry/app_data/blobs/
+SharpCR.Registry/app_data/uploading-blobs/
+SharpCR.Registry/app_data/records.json
+SharpCR.Registry/appsettings.Development.json
