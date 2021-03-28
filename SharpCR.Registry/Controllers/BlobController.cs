@@ -50,16 +50,17 @@ namespace SharpCR.Registry.Controllers
             }
 
             HttpContext.Response.Headers.Add("Docker-Content-Digest", blob.DigestString);
-            HttpContext.Response.Headers.Add("Content-Length", blob.ContentLength.ToString());
             var writeFile = string.Equals(HttpContext.Request.Method, "GET", StringComparison.OrdinalIgnoreCase);
             if (!writeFile)
             {
+                HttpContext.Response.Headers.Add("Content-Length", blob.ContentLength.ToString());
                 _logger.LogDebug("Skipping writing content for HEAD request of blob {@blob}, storage location: {@blobLoc}", blob.DigestString, blob.StorageLocation);
                 return new EmptyResult();
             }
 
             if (!_blobStorage.SupportsDownloading)
             {
+                HttpContext.Response.Headers.Add("Content-Length", blob.ContentLength.ToString());
                 _logger.LogInformation("Writing content for blob {@blob} from {@blobLoc}...", blob.DigestString, blob.StorageLocation);
                 var content = await _blobStorage.ReadAsync(blob.StorageLocation);
                 return new FileStreamResult(content, blob.MediaType ?? "application/octet-stream");
