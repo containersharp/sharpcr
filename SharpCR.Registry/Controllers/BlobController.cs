@@ -312,6 +312,10 @@ namespace SharpCR.Registry.Controllers
             return Path.Combine(_settings.TemporaryFilesRootPath, "uploading-blobs", sessionId);
         }
     }
+    
+    // todo:
+    // 1. delete an ongoing upload
+    // 2. get on ongoing upload (for resuming)
 }
 
 /*

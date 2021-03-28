@@ -53,3 +53,5 @@ namespace SharpCR.Registry
         }
     }
 }
+
+// todo: Use serilog

@@ -192,7 +192,7 @@ namespace SharpCR.Features.LocalStorage
             Interlocked.Increment(ref _pendingWriting);
             Task.Run(() =>
             {
-                Task.Delay(TimeSpan.FromSeconds(3)).Wait();
+                Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false).GetAwaiter().GetResult();
                 WriteToFileNow();
             });
         }
