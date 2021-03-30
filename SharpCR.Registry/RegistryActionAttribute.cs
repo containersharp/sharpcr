@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 
 namespace SharpCR.Registry
 {
@@ -20,6 +21,11 @@ namespace SharpCR.Registry
             var existingSelector = actionModel.Selectors.Single();
             var prefixes = new[]
             {
+                "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/{repo6}/{repo7}/{repo8}/{repo9}/{repo10}/",
+                "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/{repo6}/{repo7}/{repo8}/{repo9}/",
+                "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/{repo6}/{repo7}/{repo8}/",
+                "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/{repo6}/{repo7}/",
+                "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/{repo6}/",
                 "v2/{repo1}/{repo2}/{repo3}/{repo4}/{repo5}/",
                 "v2/{repo1}/{repo2}/{repo3}/{repo4}/",
                 "v2/{repo1}/{repo2}/{repo3}/",
@@ -52,39 +58,27 @@ namespace SharpCR.Registry
             var values = context.RouteData.Values;
             var repoParts = new List<string>();
 
-            if (values.TryGetValue("repo1", out var repo1))
+            for (var num = 1; num <= 10; num++)
             {
-                repoParts.Add((string)repo1);
-                values.Remove("repo1");
+                TryAddRepoRouteValue(values, repoParts, num);
             }
-            if (values.TryGetValue("repo2", out var repo2))
-            {
-                repoParts.Add((string)repo2);
-                values.Remove("repo2");
-            }
-            else
+            
+            if(repoParts.Count == 1)
             {
                 repoParts.Insert(0, "library");                
             }
-            
-            if (values.TryGetValue("repo3", out var repo3))
-            {
-                repoParts.Add((string)repo3);
-                values.Remove("repo3");
-            }
-            if (values.TryGetValue("repo4", out var repo4))
-            {
-                repoParts.Add((string)repo4);
-                values.Remove("repo4");
-            }
-            if (values.TryGetValue("repo5", out var repo5))
-            {
-                repoParts.Add((string)repo5);
-                values.Remove("repo5");
-            }
-
             var repoName = string.Join("/", repoParts);
             values["repo"] = repoName;
+        }
+
+        private static void TryAddRepoRouteValue(RouteValueDictionary values, List<string> repoParts, int fragmentNumber)
+        {
+            var key = $"repo{fragmentNumber}";
+            if (values.TryGetValue(key, out var routeValue))
+            {
+                repoParts.Add((string) routeValue);
+                values.Remove(key);
+            }
         }
     }
 

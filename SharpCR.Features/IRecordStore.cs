@@ -6,6 +6,7 @@ namespace SharpCR.Features
 {
     public interface IRecordStore
     {
+        // todo: try to design more about async Queryable. Is this possible? 
         Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName);
 
         Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag);
