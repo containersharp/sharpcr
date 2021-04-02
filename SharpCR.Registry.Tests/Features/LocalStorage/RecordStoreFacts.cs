@@ -50,8 +50,8 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             };
             await store.CreateArtifactAsync(artifact);
 
-            var storedItem = await store.GetArtifactByDigestAsync(repositoryName, digestString);
-            Assert.NotNull(storedItem);
+            var storedItem = await store.GetArtifactsByDigestAsync(repositoryName, digestString);
+            Assert.NotEmpty(storedItem);
         }
 
         private static DiskRecordStore CreateRecordStore(string path)

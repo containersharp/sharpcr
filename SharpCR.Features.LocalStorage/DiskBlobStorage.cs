@@ -57,7 +57,7 @@ namespace SharpCR.Features.LocalStorage
             return Task.CompletedTask;
         }
 
-        public async Task<string> SaveAsync(string digest, Stream stream, string repoName)
+        public async Task<string> SaveAsync(FileInfo temporaryFile, string repoName, string digest)
         {
             var location = Path.Combine(repoName, digest.Replace(':', Path.DirectorySeparatorChar));
             var savePath = MapPath(location);
@@ -73,8 +73,10 @@ namespace SharpCR.Features.LocalStorage
                 File.Delete(savePath);
             }
 
+
+            await using var inputStream = temporaryFile.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
             await using var outputStream = File.Create(savePath);
-            await stream.CopyToAsync(outputStream);
+            await inputStream.CopyToAsync(outputStream);
             
             var saveLocation = savePath.Substring(_storageBasePath.Length).Trim(Path.DirectorySeparatorChar);
             await _blobIndexer.AddAsync(digest, saveLocation);

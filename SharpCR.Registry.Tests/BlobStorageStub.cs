@@ -39,13 +39,14 @@ namespace SharpCR.Registry.Tests
             throw new System.NotImplementedException();
         }
 
-        public Task<string> SaveAsync(string digest, Stream stream, string repoName)
+        public async Task<string> SaveAsync(FileInfo temporaryFile, string repoName, string digest)
         {
-            using var ms = new MemoryStream();
-            stream.CopyTo(ms);
+            await using var fs = temporaryFile.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using var ms = new MemoryStream();
+            fs.CopyTo(ms);
 
             _blobs.Add(digest, ms.ToArray());
-            return Task.FromResult(digest);
+            return digest;
         }
 
         public List<byte[]> GetStoredBlobs()

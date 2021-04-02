@@ -174,18 +174,17 @@ namespace SharpCR.Registry.Controllers
             await using var fileReceived = System.IO.File.OpenRead(blobTempFile.FullName);
             var computedDigest = Digest.Compute(fileReceived);
             var computedDigestString = computedDigest.ToString();
+            await fileReceived.DisposeAsync();
             if (requestedDigest != null && !requestedDigest.Equals(computedDigest))
             {
-                _logger.LogDebug("Digest did not match in upload {@upload}", new {repo, sessionId, digest, computedDigest});
+                _logger.LogDebug("Digest did not match in upload {@upload}", new {repo, sessionId, digest, computedDigest = computedDigestString});
                 blobTempFile.Delete();
                 return BadRequest();
             }
 
             _logger.LogDebug("Saving new blob content from upload {@upload}...", new {repo, sessionId, digest});
-            fileReceived.Seek(0, SeekOrigin.Begin);
             var existingLocation = await _blobStorage.TryLocateExistingAsync(computedDigestString);
-            var savedLocation = existingLocation ?? (await _blobStorage.SaveAsync(computedDigestString, fileReceived, repo));
-            await fileReceived.DisposeAsync();
+            var savedLocation = existingLocation ?? (await _blobStorage.SaveAsync(blobTempFile, repo, computedDigestString));
             blobTempFile.Delete();
 
             var mediaType = Request.Headers["Content-Type"].ToString();

@@ -20,11 +20,11 @@ namespace SharpCR.Registry.Controllers
         
         [RegistryRoute("tags/list")]
         [HttpGet]
-        public async Task<ActionResult<TagListResponse>> List(string repo, [FromQuery]int? n, [FromQuery]string last)
+        public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
             n ??= 0;
             IEnumerable<string> returnList = null;
-            var queryableArtifacts = (await _recordStore.ListArtifactAsync(repo)).OrderBy(t => t.Tag);
+            var queryableArtifacts = _recordStore.QueryArtifacts(repo).OrderBy(t => t.Tag);
             if (!string.IsNullOrEmpty(last))
             {
                 var allTags = queryableArtifacts.Select(t => t.Tag).ToList();

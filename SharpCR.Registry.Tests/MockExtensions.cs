@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,21 @@ namespace SharpCR.Registry.Tests
         public static HttpClient CreateClient<TStartup>(this WebApplicationFactory<TStartup> factory, Action<WebHostBuilderContext, IServiceCollection> services) where TStartup: class
         {
             return factory.CreateClient(new WebApplicationFactoryClientOptions() {AllowAutoRedirect = false});
+        }
+        
+        
+        public  static FileInfo CreateTempFile(this Stream content)
+        {
+            var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var fs = File.Open(filePath, FileMode.Create);
+            content.CopyTo(fs);
+            return new FileInfo(filePath);
+        }
+
+        public static FileInfo CreateTempFile(this byte[] content)
+        {
+            var ms = new MemoryStream(content);
+            return CreateTempFile(ms);
         }
         
     }

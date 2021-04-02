@@ -24,13 +24,13 @@ namespace SharpCR.Registry.Tests
             return this;
         }
 
-        public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
+        public IQueryable<ArtifactRecord> QueryArtifacts(string repoName)
         {
             var result= _artifacts
                 .Where(artifact => string.Equals(artifact.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
                 .AsQueryable();
             
-            return Task.FromResult(result);
+            return result;
         }
 
         public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
@@ -41,12 +41,13 @@ namespace SharpCR.Registry.Tests
             return Task.FromResult(record);
         }
 
-        public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
+        public Task<ArtifactRecord[]> GetArtifactsByDigestAsync(string repoName, string digestString)
         {
-            var record = _artifacts.FirstOrDefault(t =>
+            var records = _artifacts.Where(t =>
                 string.Equals(t.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(t.DigestString, digestString, StringComparison.OrdinalIgnoreCase));
-            return Task.FromResult(record);
+                && string.Equals(t.DigestString, digestString, StringComparison.OrdinalIgnoreCase)).ToArray();
+            
+            return Task.FromResult(records);
         }
 
         public Task DeleteArtifactAsync(ArtifactRecord artifactRecord)

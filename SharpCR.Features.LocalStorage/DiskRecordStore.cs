@@ -27,13 +27,13 @@ namespace SharpCR.Features.LocalStorage
             ReadFromFile();
         }
 
-        public Task<IQueryable<ArtifactRecord>> ListArtifactAsync(string repoName)
+        public IQueryable<ArtifactRecord> QueryArtifacts(string repoName)
         {
             if (_allArtifactsByRepo.TryGetValue(repoName, out var items))
             {
-                return Task.FromResult(items.Keys.AsQueryable());
+                return items.Keys.AsQueryable();
             }
-            return Task.FromResult(new ArtifactRecord[0].AsQueryable()); 
+            return new ArtifactRecord[0].AsQueryable(); 
         }
 
         public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
@@ -44,17 +44,17 @@ namespace SharpCR.Features.LocalStorage
             return Task.FromResult(artifactRecord);
         }
 
-        public Task<ArtifactRecord> GetArtifactByDigestAsync(string repoName, string digestString)
+        public Task<ArtifactRecord[]> GetArtifactsByDigestAsync(string repoName, string digestString)
         {
             var artifactRecord =  _allArtifactsByRepo.TryGetValue(repoName, out var artifactsInRepo)
-                ? artifactsInRepo.Keys.FirstOrDefault(a => string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase))
-                : null;
+                ? artifactsInRepo.Keys.Where(a => string.Equals(a.DigestString, digestString, StringComparison.OrdinalIgnoreCase)).ToArray()
+                : new ArtifactRecord[0];
             return Task.FromResult(artifactRecord);
         }
 
-        public async Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
+        public Task DeleteArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var artifactsInRepo = await ListArtifactAsync(artifactRecord.RepositoryName);
+            var artifactsInRepo = QueryArtifacts(artifactRecord.RepositoryName);
             var actualItem = artifactsInRepo.FirstOrDefault(a =>
                 string.Equals(a.DigestString, artifactRecord.DigestString, StringComparison.OrdinalIgnoreCase)
                 && (artifactRecord.Tag == null || string.Equals(a.Tag, artifactRecord.Tag, StringComparison.OrdinalIgnoreCase)));
@@ -64,11 +64,13 @@ namespace SharpCR.Features.LocalStorage
                 repoArtifacts.TryRemove(actualItem, out _);
                 RecordsUpdated();
             }
+            
+            return Task.CompletedTask;
         }
 
-        public async Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
+        public Task UpdateArtifactAsync(ArtifactRecord artifactRecord)
         {
-            var artifactsInRepo = await ListArtifactAsync(artifactRecord.RepositoryName);
+            var artifactsInRepo = QueryArtifacts(artifactRecord.RepositoryName);
             var actualItem = artifactsInRepo.FirstOrDefault(a =>
                 string.Equals(a.DigestString, artifactRecord.DigestString, StringComparison.OrdinalIgnoreCase)
                 && (artifactRecord.Tag == null || string.Equals(a.Tag, artifactRecord.Tag, StringComparison.OrdinalIgnoreCase)));
@@ -79,6 +81,8 @@ namespace SharpCR.Features.LocalStorage
                 repoArtifacts.TryAdd(artifactRecord, null /* we don't need this value */);
                 RecordsUpdated();
             }
+
+            return Task.CompletedTask;
         }
 
         public Task CreateArtifactAsync(ArtifactRecord artifactRecord)

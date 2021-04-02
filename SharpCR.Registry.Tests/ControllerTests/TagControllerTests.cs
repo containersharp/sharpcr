@@ -17,7 +17,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var controller = new TagController(dataStore);
 
-            var tagResponse = await controller.List(repoName, 1, null);
+            var tagResponse = controller.List(repoName, 1, null);
 
             Assert.NotNull(tagResponse);
             Assert.Equal(repoName, tagResponse.Value.name);

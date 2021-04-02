@@ -177,7 +177,7 @@ namespace SharpCR.Registry.Controllers
             if (_manifestParsers.Value.ContainsKey(referencedItem.MediaType))
             {
                 // this is a sub manifest
-                return (null != await _recordStore.GetArtifactByDigestAsync(repoName, referencedItem.Digest));
+                return (await _recordStore.GetArtifactsByDigestAsync(repoName, referencedItem.Digest)).Any();
             }
 
             // this is a blob
@@ -187,7 +187,7 @@ namespace SharpCR.Registry.Controllers
         private async Task<ArtifactRecord> GetArtifactByReferenceAsync(string reference, string repoName)
         {
             return Digest.TryParse(reference, out _)
-                ? await _recordStore.GetArtifactByDigestAsync(repoName, reference)
+                ? (await _recordStore.GetArtifactsByDigestAsync(repoName, reference)).FirstOrDefault()
                 : await _recordStore.GetArtifactByTagAsync(repoName, reference);
         }
     }

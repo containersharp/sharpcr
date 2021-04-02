@@ -19,7 +19,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var storage = CreateBlobStorage(out var blobsPath);
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            var location = await SaveByStorage(bytes, storage);
+            var location = await SaveByStorage(storage, bytes);
 
             var actualPath = Path.Combine(blobsPath, location);
             Assert.True(File.Exists(actualPath));
@@ -32,7 +32,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
             var storage = CreateBlobStorage(out _);
 
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            var location = await SaveByStorage(bytes, storage);
+            var location = await SaveByStorage(storage, bytes);
 
             await using var readResult = await storage.ReadAsync(location);
             await using var readMs = new MemoryStream();
@@ -57,10 +57,9 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         {
             var storage = CreateBlobStorage(out var blobPath);
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            await using var ms = new MemoryStream(bytes);
-            
+
             var digest = "sha256:ab123de";
-            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+            var location = await storage.SaveAsync(bytes.CreateTempFile(), "abc/foo",digest);
             var located = await storage.TryLocateExistingAsync(digest);
             
             Assert.Equal(location, located);
@@ -72,10 +71,9 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         {
             var storage = CreateBlobStorage(out var blobPath);
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            await using var ms = new MemoryStream(bytes);
             
             var digest = "sha256:ab123de";
-            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+            var location = await storage.SaveAsync(bytes.CreateTempFile(),"abc/foo", digest);
 
             storage.Dispose();
             var indexContent = await File.ReadAllTextAsync(Path.Combine(blobPath, "index.txt"));
@@ -88,10 +86,9 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         {
             var storage = CreateBlobStorage(out var blobPath);
             var bytes = Encoding.Default.GetBytes(Guid.NewGuid().ToString("N"));
-            await using var ms = new MemoryStream(bytes);
 
             var digest = "sha256:ab123de";
-            var location = await storage.SaveAsync(digest, ms, "abc/foo");
+            var location = await storage.SaveAsync(bytes.CreateTempFile(), "abc/foo", digest);
             await storage.DeleteAsync(location);
             await storage.TryLocateExistingAsync(digest);
 
@@ -112,11 +109,12 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         }
         
         
-        static async Task<string> SaveByStorage(byte[] bytes, DiskBlobStorage storage)
+        static async Task<string> SaveByStorage(DiskBlobStorage storage, byte[] bytes)
         {
-            await using var ms = new MemoryStream(bytes);
-            return await storage.SaveAsync("sha256:ab123de", ms, "abc/foo");
+            var file = new MemoryStream(bytes).CreateTempFile();
+            return await storage.SaveAsync(file, "abc/foo", "sha256:ab123de");
         }
+
 
     }
 }

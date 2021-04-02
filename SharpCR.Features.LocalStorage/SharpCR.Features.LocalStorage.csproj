@@ -13,7 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="SharpCR.Features" Version="1.0.2" />
+        <PackageReference Include="SharpCR.Features" Version="1.0.5" />
     </ItemGroup>
 
 </Project>
