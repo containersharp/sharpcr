@@ -5,11 +5,10 @@ namespace SharpCR.Features
 {
     public interface IBlobStorage
     {
-
         Task<string> TryLocateExistingAsync(string digest);
         Task<Stream> ReadAsync(string location);
         Task DeleteAsync(string location);
-        Task<string> SaveAsync(string digest, Stream stream, string repoName);
+        Task<string> SaveAsync(FileInfo temporaryFile, string repoName, string digest);
 
         bool SupportsDownloading { get; }
         Task<string> GenerateDownloadUrlAsync(string location);

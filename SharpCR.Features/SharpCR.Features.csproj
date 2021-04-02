@@ -5,7 +5,7 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <VersionPrefix>1.0.2</VersionPrefix>
+    <VersionPrefix>1.0.5</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
