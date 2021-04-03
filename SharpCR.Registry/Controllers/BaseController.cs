@@ -2,10 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SharpCR.Registry.Controllers
 {
-    [Route("v2")]
     public class BaseController : ControllerBase
     {
-        [Route("")]
         public ActionResult Base()
         {
             HttpContext.Response.Headers.Add("Docker-Distribution-API-Version", "registry/2.0");
@@ -14,7 +12,6 @@ namespace SharpCR.Registry.Controllers
             return new OkResult();
         }
         
-        [Route("_catalog")]
         public object Catalog()
         {
             throw new System.NotImplementedException();
