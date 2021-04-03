@@ -37,9 +37,10 @@ namespace SharpCR.Registry.Tests
         
         public  static FileInfo CreateTempFile(this Stream content)
         {
-            var filePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var filePath = Path.Combine(Path.GetTempPath(), "SharpCRTests",  Guid.NewGuid().ToString("N"));
             var fs = File.Open(filePath, FileMode.Create);
             content.CopyTo(fs);
+            fs.Dispose();
             return new FileInfo(filePath);
         }
 

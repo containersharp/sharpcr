@@ -30,6 +30,7 @@ namespace SharpCR.Registry.Controllers
         private readonly IRecordStore _recordStore;
         private readonly ILogger<ManifestController> _logger;
         private readonly Lazy<Dictionary<string, IManifestParser>> _manifestParsers;
+        private const string ManifestUrlPattern = "^v2/(?<repo>.+)/manifests/(?<reference>.+)$";
 
         public ManifestController(IRecordStore recordStore, ILogger<ManifestController> logger)
         {
@@ -38,9 +39,7 @@ namespace SharpCR.Registry.Controllers
             _manifestParsers = new Lazy<Dictionary<string, IManifestParser>>(InitializeManifestParsers);
         }
 
-        [RegistryRoute("manifests/{reference}")]
-        [HttpGet]
-        [HttpHead]
+        [NamedRegexRoute(ManifestUrlPattern, "Get", "Head")]
         public async Task<ActionResult> Get(string repo, string reference)
         {
             var artifact = await GetArtifactByReferenceAsync(reference, repo);
@@ -67,8 +66,7 @@ namespace SharpCR.Registry.Controllers
             return new FileContentResult(manifestBytes, MediaTypeHeaderValue.Parse(artifact.ManifestMediaType));
         }
 
-        [RegistryRoute("manifests/{reference}")]
-        [HttpPut]
+        [NamedRegexRoute(ManifestUrlPattern, "Put")]
         public async Task<IActionResult> Save(string repo, string reference)
         {
             string queriedTag = null;
@@ -140,8 +138,7 @@ namespace SharpCR.Registry.Controllers
             return new StatusCodeResult((int) HttpStatusCode.Created);
         }
 
-        [RegistryRoute("manifests/{reference}")]
-        [HttpDelete]
+        [NamedRegexRoute(ManifestUrlPattern, "Delete")]
         public async Task<IActionResult> Delete(string repo, string reference)
         {
             var artifact = await GetArtifactByReferenceAsync(reference, repo);

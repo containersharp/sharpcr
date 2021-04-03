@@ -26,6 +26,10 @@ namespace SharpCR.Registry.Controllers
         private readonly IBlobStorage _blobStorage;
         private readonly Settings _settings;
         private readonly ILogger<BlobController> _logger;
+        
+        private const string BlobUploadContinueUrlPattern = "^v2/(?<repo>.+)/blobs/uploads/(?<sessionId>.+)$";
+        private const string BlobUploadCreateUrlPattern = "^v2/(?<repo>.+)/blobs/uploads/?$";
+        private const string BlobOperationUrlPattern = "^v2/(?<repo>.+)/blobs/(?<digest>.+)$";
 
         public BlobController(IRecordStore recordStore, IBlobStorage blobStorage, IOptions<Settings> settings, 
             IWebHostEnvironment environment, ILogger<BlobController> logger)
@@ -37,9 +41,7 @@ namespace SharpCR.Registry.Controllers
             _settings.TemporaryFilesRootPath ??= environment.ContentRootPath;
         }
 
-        [RegistryRoute("blobs/{digest}")]
-        [HttpGet]
-        [HttpHead]
+        [NamedRegexRoute(BlobOperationUrlPattern, 3,"Get", "Head")]
         public async Task<IActionResult> Get(string repo, string digest)
         {
             var blob = await _recordStore.GetBlobByDigestAsync(repo, digest);
@@ -73,7 +75,7 @@ namespace SharpCR.Registry.Controllers
             }
         }
 
-        [RegistryRoute("blobs/uploads")]
+        [NamedRegexRoute(BlobUploadCreateUrlPattern, 2,"Post")]
         [HttpPost]
         public async Task<IActionResult> CreateUpload(string repo, [FromQuery] string digest, [FromQuery] string mount, [FromQuery] string @from)
         {
@@ -98,9 +100,7 @@ namespace SharpCR.Registry.Controllers
             }
         }
 
-        [RegistryRoute("blobs/uploads/{sessionId}")]
-        [HttpPatch]
-        [HttpPut]
+        [NamedRegexRoute(BlobUploadContinueUrlPattern, 1, "Put", "Patch")]
         public async Task<IActionResult> ContinueUpload(string repo, string sessionId, [FromQuery] string digest)
         {
             var sessionIdPrefix = sessionId.Split("_", StringSplitOptions.RemoveEmptyEntries);
@@ -133,8 +133,7 @@ namespace SharpCR.Registry.Controllers
             return await FinishUploading(repo, digest, blobTempFile, chunkedEncoding, sessionId);
         }
 
-        [RegistryRoute("blobs/{digest}")]
-        [HttpDelete]
+        [NamedRegexRoute(BlobOperationUrlPattern, 4, "Delete")]
         public async Task<ActionResult> Delete(string repo, string digest)
         {
             var blob = await _recordStore.GetBlobByDigestAsync(repo, digest);

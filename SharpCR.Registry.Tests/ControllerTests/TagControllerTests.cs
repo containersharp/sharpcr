@@ -8,7 +8,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
     public class TagControllerTests
     {
         [Fact]
-        public async Task ListTags()
+        public void ListTags()
         {
             var repoName = "foo/abcd";
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repoName};

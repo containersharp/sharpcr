@@ -14,7 +14,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         [Fact]
         public async Task ShouldStore()
         {
-            var basePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var basePath = Path.Combine(Path.GetTempPath(), "SharpCRTests", Guid.NewGuid().ToString("N"));
             var recordsFile = Path.Combine(basePath, "records.json");
             if (File.Exists(recordsFile))
             {
@@ -38,7 +38,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         [Fact]
         public async Task ShouldGet()
         {
-            var store = CreateRecordStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+            var store = CreateRecordStore(Path.Combine(Path.GetTempPath(), "SharpCRTests", Guid.NewGuid().ToString("N")));
             var digestString = "sha256:" + Guid.NewGuid().ToString("N");
             var repositoryName = "library/abcd";
 

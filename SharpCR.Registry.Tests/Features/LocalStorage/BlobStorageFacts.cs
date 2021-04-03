@@ -102,7 +102,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
 
         static DiskBlobStorage CreateBlobStorage(out string blobsPath)
         {
-            var basePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var basePath = Path.Combine(Path.GetTempPath(), "SharpCRTests", Guid.NewGuid().ToString("N"));
             blobsPath = Path.Combine(basePath, "blobs");
             var context = TestUtilities.CreateTestSetupContext();
             return new DiskBlobStorage(context.HostEnvironment, Options.Create(new LocalStorageConfiguration{ BasePath = basePath}));

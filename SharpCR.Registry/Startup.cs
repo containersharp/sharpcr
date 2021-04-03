@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SharpCR.Features;
+using SharpCR.Registry.Controllers;
 using SharpCR.Registry.FeatureLoading;
 
 namespace SharpCR.Registry
@@ -48,114 +50,26 @@ namespace SharpCR.Registry
             
             _loadedFeatures.ForEach(feature => feature.ConfigureWebAppPipeline(app, services,  _context));
             app.UseEndpoints(endpoints =>
-            {
-                var baseProbe = "^/v2/?$";
-                var baseCatalog = "^/v2/_catalog/?$";
-                var manifestOperation = "^/v2/(?<repo>.+)/manifests/(?<reference>.+)$";
-                var blobUploadContinue = "^/v2/(?<repo>.+)/blobs/uploads/(?<sessionId>.+)$";
-                var blobUploadCreate = "^/v2/(?<repo>.+)/blobs/uploads/?$";
-                var blobOperation = "^/v2/(?<repo>.+)/blobs/(?<digest>.+)$";
-                var tagList = "^/v2/(?<repo>.+)/tags/list/?$";
-
-        
-                endpoints.MapControllerRoute(
-                    name: "base_probe",
-                    pattern: "/v2",
-                    constraints: new
+            {   
+                endpoints.MapControllerRoute("base_probe",
+                    "v2",
+                    new { controller = "Base", action = "Base", }, 
+                    new
                     { 
                         httpMethod = new HttpMethodRouteConstraint("Get", "Head")
-                    },
-                    defaults: new { controller = "Base", action = "Get", });
+                    });
                 
-                endpoints.MapControllerRoute(
-                    name: "base_catalog",
-                    pattern: "/v2/_catalog",
-                    constraints: new
+                endpoints.MapControllerRoute("base_catalog",
+                    "v2/_catalog",
+                    new { controller = "Base", action = "Catalog", },
+                    new
                     { 
                         httpMethod = new HttpMethodRouteConstraint("Get", "Head")
-                    },
-                    defaults: new { controller = "Base", action = "Get", });
+                    });
 
-
-                endpoints.MapControllerRoute(
-                    name: "manifest_operations_get",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(manifestOperation), 
-                        httpMethod = new HttpMethodRouteConstraint("Get", "Head")
-                    },
-                    defaults: new { controller = "Manifest", action = "Get", });
-
-                endpoints.MapControllerRoute(
-                    name: "manifest_operations_save",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(manifestOperation), 
-                        httpMethod = new HttpMethodRouteConstraint("Put")
-                    },
-                    defaults: new { controller = "Manifest", action = "Delete", });
-                endpoints.MapControllerRoute(
-                    name: "manifest_operations_delete",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(manifestOperation), 
-                        httpMethod = new HttpMethodRouteConstraint("Delete")
-                    },
-                    defaults: new { controller = "Manifest", action = "Delete", });
-
-
-                endpoints.MapControllerRoute(
-                    name: "blobs_upload_continue",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(blobUploadContinue), 
-                        httpMethod = new HttpMethodRouteConstraint("Put", "Patch")
-                    },
-                    defaults: new { controller = "Blob", action = "ContinueUpload", });
-
-                endpoints.MapControllerRoute(
-                    name: "blobs_upload_create",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(blobUploadCreate), 
-                        httpMethod = new HttpMethodRouteConstraint("Put", "Patch")
-                    },
-                    defaults: new { controller = "Blob", action = "CreateUpload", });
-
-                endpoints.MapControllerRoute(
-                    name: "blobs_operations_get",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(blobOperation), 
-                        httpMethod = new HttpMethodRouteConstraint("Get", "Head")
-                    },
-                    defaults: new { controller = "Blob", action = "Get", });
-
-                endpoints.MapControllerRoute(
-                    name: "blobs_operations_delete",
-                    pattern: "{*url}",
-                    constraints: new
-                    {
-                        url = new RegexNamedGroupRoutingConstraint(blobOperation), 
-                        httpMethod = new HttpMethodRouteConstraint("Delete")
-                    },
-                    defaults: new { controller = "Blob", action = "Delete", });
-                
-                endpoints.MapControllerRoute(
-                    name: "tag_list",
-                    pattern: "{*url}",
-                    constraints: new
-                    { 
-                        url = new RegexNamedGroupRoutingConstraint(tagList),
-                        httpMethod = new HttpMethodRouteConstraint("Get", "Head")
-                    },
-                    defaults: new { controller = "Tag", action = "List", });
+                endpoints.MapRegexRoutes<ManifestController>();
+                endpoints.MapRegexRoutes<BlobController>();
+                endpoints.MapRegexRoutes<TagController>();
             });
         }
     }

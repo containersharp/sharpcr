@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SharpCR.Features;
 using SharpCR.Registry.Controllers.ResponseModels;
@@ -11,6 +10,7 @@ namespace SharpCR.Registry.Controllers
     public class TagController
     {
         private readonly IRecordStore _recordStore;
+        private const string  TagListUrlPattern = "^v2/(?<repo>.+)/tags/list/?$";
 
         public TagController(IRecordStore recordStore)
         {
@@ -18,8 +18,7 @@ namespace SharpCR.Registry.Controllers
         }
         
         
-        [RegistryRoute("tags/list")]
-        [HttpGet]
+        [NamedRegexRoute(TagListUrlPattern, "Get")]
         public ActionResult<TagListResponse> List(string repo, [FromQuery]int? n, [FromQuery]string last)
         {
             n ??= 0;
