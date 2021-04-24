@@ -33,6 +33,15 @@ namespace SharpCR.Registry.Tests
             return result;
         }
 
+        public Task<IEnumerable<string>> GetTags(string repoName)
+        {
+            var tags = _artifacts
+                .Where(a => string.Equals(a.RepositoryName, repoName, StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.Tag);
+            
+            return Task.FromResult(tags);
+        }
+
         public Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag)
         {
             var record = _artifacts.FirstOrDefault(t =>

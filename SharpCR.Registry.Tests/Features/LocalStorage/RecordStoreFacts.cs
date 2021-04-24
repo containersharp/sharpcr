@@ -15,7 +15,7 @@ namespace SharpCR.Registry.Tests.Features.LocalStorage
         public async Task ShouldStore()
         {
             var basePath = Path.Combine(Path.GetTempPath(), "SharpCRTests", Guid.NewGuid().ToString("N"));
-            var recordsFile = Path.Combine(basePath, "records.json");
+            var recordsFile = Path.Combine(basePath, "records.db");
             if (File.Exists(recordsFile))
             {
                 File.Delete(recordsFile);

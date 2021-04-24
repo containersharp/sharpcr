@@ -8,7 +8,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
     public class TagControllerTests
     {
         [Fact]
-        public void ListTags()
+        public async Task ListTags()
         {
             var repoName = "foo/abcd";
             var dummyArtifact1 = new ArtifactRecord {Tag = "z1.0.0", RepositoryName = repoName};
@@ -17,7 +17,7 @@ namespace SharpCR.Registry.Tests.ControllerTests
 
             var controller = new TagController(dataStore);
 
-            var tagResponse = controller.List(repoName, 1, null);
+            var tagResponse = await controller.List(repoName, 1, null);
 
             Assert.NotNull(tagResponse);
             Assert.Equal(repoName, tagResponse.Value.name);
