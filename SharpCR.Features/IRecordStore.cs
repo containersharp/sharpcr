@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using SharpCR.Features.Records;
 
@@ -6,7 +6,7 @@ namespace SharpCR.Features
 {
     public interface IRecordStore
     {
-        IQueryable<ArtifactRecord> QueryArtifacts(string repoName);
+        Task<IEnumerable<string>> GetTags(string repoName);
 
         Task<ArtifactRecord> GetArtifactByTagAsync(string repoName, string tag);
 
