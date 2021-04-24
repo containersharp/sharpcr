@@ -17,7 +17,7 @@ namespace SharpCR.Features.LocalStorage
         private readonly LocalStorageConfiguration _config;
         private volatile ConcurrentDictionary<string, ConcurrentDictionary<ArtifactRecord, object>> _allArtifactsByRepo;
         private volatile ConcurrentDictionary<string, ConcurrentDictionary<BlobRecord, object>> _allBlobsByRepo;
-        private int _pendingWriting = 0;
+        private volatile int _pendingWriting = 0;
 
         public DiskRecordStore(IWebHostEnvironment environment, IOptions<LocalStorageConfiguration> configuredOptions)
         {
@@ -188,12 +188,11 @@ namespace SharpCR.Features.LocalStorage
 
         private void RecordsUpdated()
         {
-            if (_pendingWriting > 0)
+            if (Interlocked.CompareExchange(ref _pendingWriting, 1, 0) != 0)
             {
                 return;
             }
 
-            Interlocked.Increment(ref _pendingWriting);
             Task.Run(() =>
             {
                 Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -209,7 +208,7 @@ namespace SharpCR.Features.LocalStorage
             }
             
             WriteToFile();
-            Interlocked.Decrement(ref _pendingWriting);
+            Interlocked.Exchange(ref _pendingWriting, 0);
         }
 
         public void Dispose()
